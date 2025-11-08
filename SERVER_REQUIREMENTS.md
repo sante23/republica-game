@@ -60,7 +60,7 @@ Guida completa per scegliere e configurare il server per Republica Game.
 ssh root@your-server-ip
 
 # 4. Esegui quick setup
-curl -sSL https://raw.githubusercontent.com/your-repo/republica-game/main/scripts/install-server.sh | bash
+curl -sSL https://raw.githubusercontent.com/sante23@gmail.com/republica-game/main/scripts/install-server.sh | bash
 ```
 
 ### ☁️ AWS EC2
@@ -130,7 +130,7 @@ sudo su
 
 ```bash
 # Download e avvia setup guidato
-git clone https://github.com/your-repo/republica-game.git
+git clone https://github.com/sante23@gmail.com/republica-game.git
 cd republica-game
 chmod +x scripts/quick-setup.sh
 ./scripts/quick-setup.sh
@@ -140,7 +140,7 @@ chmod +x scripts/quick-setup.sh
 
 ```bash
 # Per chi preferisce Docker
-git clone https://github.com/your-repo/republica-game.git
+git clone https://github.com/sante23@gmail.com/republica-game.git
 cd republica-game
 chmod +x scripts/deploy-docker.sh
 ./scripts/deploy-docker.sh
@@ -150,7 +150,7 @@ chmod +x scripts/deploy-docker.sh
 
 ```bash
 # Per controllo completo
-git clone https://github.com/your-repo/republica-game.git
+git clone https://github.com/sante23@gmail.com/republica-game.git
 cd republica-game
 # Segui DEPLOYMENT.md passo per passo
 ```
@@ -348,7 +348,7 @@ module.exports = {
 ### 💬 Community Support
 - 💬 Discord: [Unisciti alla community](https://discord.gg/republica)
 - 📧 Email: support@republicagame.com
-- 🐛 Issues: [GitHub Issues](https://github.com/your-repo/republica-game/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/sante23@gmail.com/republica-game/issues)
 
 ### 🏆 Professional Support
 - 📞 Setup assistito: €200 one-time

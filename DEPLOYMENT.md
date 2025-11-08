@@ -83,7 +83,7 @@ sudo chown $USER:$USER /var/www/republica
 
 # Clona repository
 cd /var/www/republica
-git clone https://github.com/your-repo/republica-game.git .
+git clone https://github.com/sante23@gmail.com/republica-game.git .
 
 # Installa dipendenze
 npm run install:all
