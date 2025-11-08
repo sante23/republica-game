@@ -14,6 +14,7 @@ interface City {
   buildings: Record<string, number>;
   production: Record<string, number>;
   consumption: Record<string, number>;
+  isCapital?: boolean;
 }
 
 interface GameContextType {
