@@ -25,6 +25,7 @@ interface GameContextType {
   fetchCities: () => Promise<void>;
   selectCity: (city: City) => void;
   updateCityResources: (cityId: string, resources: Record<string, number>) => void;
+  createCity: (name: string, x: number, y: number) => Promise<{ success: boolean; city?: City; error?: string }>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -108,6 +109,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     updateCityData(cityId, { resources });
   };
 
+  const createCity = async (name: string, x: number, y: number) => {
+    try {
+      const response = await api.post('/cities/create', { name, x, y });
+      const newCity = response.data.city;
+      setCities(prevCities => [...prevCities, newCity]);
+      if (cities.length === 0) {
+        setSelectedCity(newCity);
+      }
+      return { success: true, city: newCity };
+    } catch (error: any) {
+      console.error('Failed to create city:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to create city';
+      return { success: false, error: errorMessage };
+    }
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -118,6 +135,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fetchCities,
         selectCity,
         updateCityResources,
+        createCity,
       }}
     >
       {children}

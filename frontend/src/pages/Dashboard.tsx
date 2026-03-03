@@ -1,13 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { Building, Coins, Users, TrendingUp, Globe, Award } from 'lucide-react';
+import CityFoundModal from '../components/CityFoundModal';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const { cities, fetchCities, loading } = useGame();
+  const { cities, fetchCities, loading, createCity } = useGame();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchCities();
@@ -18,6 +20,15 @@ const Dashboard: React.FC = () => {
     const cityTotal = Object.values(city.resources).reduce((a, b) => a + b, 0);
     return sum + cityTotal;
   }, 0);
+
+  const handleFoundCity = async (name: string, x: number, y: number) => {
+    const result = await createCity(name, x, y);
+    if (result.success) {
+      await fetchCities();
+    } else {
+      throw new Error(result.error);
+    }
+  };
 
   return (
     <div className="dashboard">
@@ -78,7 +89,7 @@ const Dashboard: React.FC = () => {
         <div className="section-header">
           <h2>Your Cities</h2>
           {cities.length < Math.floor((user?.level || 0) / 5) + 1 && (
-            <button className="btn-primary">Found New City</button>
+            <button className="btn-primary" onClick={() => setIsModalOpen(true)}>Found New City</button>
           )}
         </div>
 
@@ -89,7 +100,7 @@ const Dashboard: React.FC = () => {
             <Building size={64} />
             <h3>No cities yet</h3>
             <p>Found your first city to start building your empire!</p>
-            <button className="btn-primary">Found First City</button>
+            <button className="btn-primary" onClick={() => setIsModalOpen(true)}>Found First City</button>
           </div>
         ) : (
           <div className="cities-grid">
@@ -139,6 +150,12 @@ const Dashboard: React.FC = () => {
           <p>See top players</p>
         </Link>
       </nav>
+
+      <CityFoundModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleFoundCity}
+      />
     </div>
   );
 };
