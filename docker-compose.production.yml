@@ -35,6 +35,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: republica_db
       JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE:-24h}
       CLIENT_URL: ${CLIENT_URL}
     networks:
       - republica-network
