@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGame } from '../contexts/GameContext';
 import api from '../config/api';
 import { ArrowLeft, TrendingUp, ShoppingCart, Package } from 'lucide-react';
+import CreateListingModal from '../components/CreateListingModal';
 import './Market.css';
 
 interface Listing {
@@ -20,10 +22,12 @@ interface Listing {
 
 const Market: React.FC = () => {
   const navigate = useNavigate();
+  const { cities } = useGame();
   const [listings, setListings] = useState<Listing[]>([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     fetchListings();
@@ -54,6 +58,17 @@ const Market: React.FC = () => {
     }
   };
 
+  const createListing = async (cityId: string, resource: string, quantity: number, pricePerUnit: number) => {
+    try {
+      await api.post('/market/sell', { cityId, resource, quantity, pricePerUnit });
+      fetchListings();
+      alert('Listing created successfully!');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || 'Failed to create listing';
+      throw new Error(errorMsg);
+    }
+  };
+
   const resourceIcons: Record<string, string> = {
     food: '🌾',
     wood: '🪵',
@@ -70,7 +85,7 @@ const Market: React.FC = () => {
           <ArrowLeft /> Back
         </button>
         <h1>Global Marketplace</h1>
-        <button className="btn-primary">
+        <button className="btn-primary" onClick={() => setIsCreateModalOpen(true)}>
           <Package /> Create Listing
         </button>
       </header>
@@ -171,6 +186,13 @@ const Market: React.FC = () => {
           })}
         </div>
       </div>
+
+      <CreateListingModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onConfirm={createListing}
+        cities={cities}
+      />
     </div>
   );
 };

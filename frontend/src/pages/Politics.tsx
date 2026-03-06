@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { ArrowLeft, Vote, Users, Calendar, Award } from 'lucide-react';
+import RegisterCandidateModal from '../components/RegisterCandidateModal';
+import VoteModal from '../components/VoteModal';
+import ViewCandidatesModal from '../components/ViewCandidatesModal';
 import './Politics.css';
 
 interface Election {
@@ -19,6 +22,10 @@ const Politics: React.FC = () => {
   const [elections, setElections] = useState<Election[]>([]);
   const [selectedElection, setSelectedElection] = useState<Election | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [activeElectionId, setActiveElectionId] = useState('');
 
   useEffect(() => {
     fetchElections();
@@ -48,6 +55,43 @@ const Politics: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const handleRegister = async (program: string) => {
+    try {
+      await api.post(`/politics/elections/${activeElectionId}/register`, { program });
+      fetchElections();
+      alert('Successfully registered as candidate!');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || 'Failed to register';
+      throw new Error(errorMsg);
+    }
+  };
+
+  const handleVote = async (candidateId: string) => {
+    try {
+      await api.post(`/politics/elections/${activeElectionId}/vote`, { candidateId });
+      fetchElections();
+      alert('Vote cast successfully!');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || 'Failed to vote';
+      throw new Error(errorMsg);
+    }
+  };
+
+  const openRegisterModal = (electionId: string) => {
+    setActiveElectionId(electionId);
+    setIsRegisterModalOpen(true);
+  };
+
+  const openVoteModal = (electionId: string) => {
+    setActiveElectionId(electionId);
+    setIsVoteModalOpen(true);
+  };
+
+  const openViewModal = (electionId: string) => {
+    setActiveElectionId(electionId);
+    setIsViewModalOpen(true);
   };
 
   return (
@@ -106,13 +150,24 @@ const Politics: React.FC = () => {
                     </div>
                     <div className="election-actions">
                       {election.status === 'REGISTRATION' && (
-                        <button className="btn-primary">Register as Candidate</button>
+                        <button className="btn-primary" onClick={() => openRegisterModal(election.id)}>
+                          Register as Candidate
+                        </button>
                       )}
                       {election.status === 'VOTING' && (
-                        <button className="btn-primary">Cast Your Vote</button>
+                        <>
+                          <button className="btn-primary" onClick={() => openVoteModal(election.id)}>
+                            Cast Your Vote
+                          </button>
+                          <button className="btn-secondary" onClick={() => openViewModal(election.id)}>
+                            View Candidates
+                          </button>
+                        </>
                       )}
                       {election.status === 'CAMPAIGN' && (
-                        <button className="btn-secondary">View Candidates</button>
+                        <button className="btn-secondary" onClick={() => openViewModal(election.id)}>
+                          View Candidates
+                        </button>
                       )}
                     </div>
                   </div>
@@ -158,6 +213,29 @@ const Politics: React.FC = () => {
           </section>
         </div>
       )}
+
+      <RegisterCandidateModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onConfirm={handleRegister}
+        electionId={activeElectionId}
+        position={elections.find(e => e.id === activeElectionId)?.position || ''}
+      />
+
+      <VoteModal
+        isOpen={isVoteModalOpen}
+        onClose={() => setIsVoteModalOpen(false)}
+        onConfirm={handleVote}
+        electionId={activeElectionId}
+        position={elections.find(e => e.id === activeElectionId)?.position || ''}
+      />
+
+      <ViewCandidatesModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        electionId={activeElectionId}
+        position={elections.find(e => e.id === activeElectionId)?.position || ''}
+      />
     </div>
   );
 };

@@ -13,6 +13,7 @@ const cityRoutes = require('./routes/cities');
 const resourceRoutes = require('./routes/resources');
 const marketRoutes = require('./routes/market');
 const politicsRoutes = require('./routes/politics');
+const leaderboardRoutes = require('./routes/leaderboard');
 
 const app = express();
 const httpServer = createServer(app);
@@ -43,6 +44,7 @@ app.use('/api/cities', cityRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/politics', politicsRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });

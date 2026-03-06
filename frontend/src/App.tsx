@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import City from './pages/City';
 import Market from './pages/Market';
 import Politics from './pages/Politics';
+import Leaderboard from './pages/Leaderboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -38,6 +39,11 @@ function App() {
               <Route path="/politics" element={
                 <ProtectedRoute>
                   <Politics />
+                </ProtectedRoute>
+              } />
+              <Route path="/leaderboard" element={
+                <ProtectedRoute>
+                  <Leaderboard />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to="/" />} />
