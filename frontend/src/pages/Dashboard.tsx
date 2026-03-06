@@ -149,6 +149,10 @@ const Dashboard: React.FC = () => {
           <h3>🏆 Leaderboard</h3>
           <p>See top players</p>
         </Link>
+        <Link to="/world-map" className="nav-card">
+          <h3>🗺️ World Map</h3>
+          <p>Explore cities around the world</p>
+        </Link>
       </nav>
 
       <CityFoundModal
