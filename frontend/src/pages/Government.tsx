@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Crown, FileText, AlertTriangle } from 'lucide-react';
 import './Government.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const Government: React.FC = () => {
   const { user } = useAuth();
