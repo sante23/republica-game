@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
+import { ToastProvider } from './contexts/ToastContext';
+import ToastContainer from './components/ToastContainer';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -9,6 +11,7 @@ import City from './pages/City';
 import Market from './pages/Market';
 import Politics from './pages/Politics';
 import Leaderboard from './pages/Leaderboard';
+import WorldMap from './pages/WorldMap';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -16,9 +19,11 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <GameProvider>
-          <div className="App">
-            <Routes>
+        <ToastProvider>
+          <GameProvider>
+            <ToastContainer />
+            <div className="App">
+              <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/" element={
@@ -46,10 +51,16 @@ function App() {
                   <Leaderboard />
                 </ProtectedRoute>
               } />
+              <Route path="/world-map" element={
+                <ProtectedRoute>
+                  <WorldMap />
+                </ProtectedRoute>
+              } />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
-          </div>
-        </GameProvider>
+            </div>
+          </GameProvider>
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );

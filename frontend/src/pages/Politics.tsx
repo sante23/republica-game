@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
 import { ArrowLeft, Vote, Users, Calendar, Award } from 'lucide-react';
 import RegisterCandidateModal from '../components/RegisterCandidateModal';
@@ -19,6 +20,7 @@ interface Election {
 
 const Politics: React.FC = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [elections, setElections] = useState<Election[]>([]);
   const [selectedElection, setSelectedElection] = useState<Election | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ const Politics: React.FC = () => {
     try {
       await api.post(`/politics/elections/${activeElectionId}/register`, { program });
       fetchElections();
-      alert('Successfully registered as candidate!');
+      toast.success('Successfully registered as candidate! 🗳️');
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || 'Failed to register';
       throw new Error(errorMsg);
@@ -72,7 +74,7 @@ const Politics: React.FC = () => {
     try {
       await api.post(`/politics/elections/${activeElectionId}/vote`, { candidateId });
       fetchElections();
-      alert('Vote cast successfully!');
+      toast.success('Vote cast successfully! ✅');
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || 'Failed to vote';
       throw new Error(errorMsg);

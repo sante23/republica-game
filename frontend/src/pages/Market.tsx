@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
 import { ArrowLeft, TrendingUp, ShoppingCart, Package } from 'lucide-react';
 import CreateListingModal from '../components/CreateListingModal';
@@ -23,6 +24,7 @@ interface Listing {
 const Market: React.FC = () => {
   const navigate = useNavigate();
   const { cities } = useGame();
+  const toast = useToast();
   const [listings, setListings] = useState<Listing[]>([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -50,9 +52,9 @@ const Market: React.FC = () => {
     try {
       await api.post(`/market/buy/${listingId}`);
       fetchListings();
-      alert('Purchase successful!');
+      toast.success('Purchase successful! 🎉');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Purchase failed');
+      toast.error(error.response?.data?.error || 'Purchase failed');
     } finally {
       setBuying(null);
     }
@@ -62,7 +64,7 @@ const Market: React.FC = () => {
     try {
       await api.post('/market/sell', { cityId, resource, quantity, pricePerUnit });
       fetchListings();
-      alert('Listing created successfully!');
+      toast.success('Listing created successfully! 🏪');
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || 'Failed to create listing';
       throw new Error(errorMsg);

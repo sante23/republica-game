@@ -64,6 +64,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateCityData(data.cityId, { resources: data.resources });
       });
 
+      newSocket.on('production-update', (data) => {
+        console.log('Production update received:', data);
+        updateCityData(data.cityId, {
+          resources: data.resources,
+          production: data.production,
+          population: data.population,
+          happiness: data.happiness
+        });
+      });
+
       setSocket(newSocket);
 
       return () => {

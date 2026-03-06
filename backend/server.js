@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const sequelize = require('./config/database');
+const GameScheduler = require('./services/scheduler');
 
 const authRoutes = require('./routes/auth');
 const cityRoutes = require('./routes/cities');
@@ -74,6 +75,9 @@ io.on('connection', (socket) => {
 
 app.set('io', io);
 
+// Initialize game scheduler
+const scheduler = new GameScheduler(io);
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
@@ -85,7 +89,18 @@ sequelize.sync({ alter: true }).then(() => {
   console.log('Database connected and synchronized');
   httpServer.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    // Start the game scheduler
+    scheduler.start();
   });
 }).catch(err => {
   console.error('Unable to connect to database:', err);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  scheduler.stop();
+  httpServer.close(() => {
+    console.log('Process terminated');
+  });
 });
