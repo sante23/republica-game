@@ -153,6 +153,18 @@ const Dashboard: React.FC = () => {
           <h3>🗺️ World Map</h3>
           <p>Explore cities around the world</p>
         </Link>
+        <Link to="/military" className="nav-card">
+          <h3>⚔️ Military</h3>
+          <p>Train units and wage war</p>
+        </Link>
+        <Link to="/economy" className="nav-card">
+          <h3>📊 Economy</h3>
+          <p>Manage trade routes and taxes</p>
+        </Link>
+        <Link to="/government" className="nav-card">
+          <h3>🏛️ Government</h3>
+          <p>Propose policies and govern</p>
+        </Link>
       </nav>
 
       <CityFoundModal

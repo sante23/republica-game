@@ -12,6 +12,9 @@ import Market from './pages/Market';
 import Politics from './pages/Politics';
 import Leaderboard from './pages/Leaderboard';
 import WorldMap from './pages/WorldMap';
+import Military from './pages/Military';
+import Economy from './pages/Economy';
+import Government from './pages/Government';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -54,6 +57,21 @@ function App() {
               <Route path="/world-map" element={
                 <ProtectedRoute>
                   <WorldMap />
+                </ProtectedRoute>
+              } />
+              <Route path="/military" element={
+                <ProtectedRoute>
+                  <Military />
+                </ProtectedRoute>
+              } />
+              <Route path="/economy" element={
+                <ProtectedRoute>
+                  <Economy />
+                </ProtectedRoute>
+              } />
+              <Route path="/government" element={
+                <ProtectedRoute>
+                  <Government />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to="/" />} />

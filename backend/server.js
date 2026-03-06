@@ -15,6 +15,9 @@ const resourceRoutes = require('./routes/resources');
 const marketRoutes = require('./routes/market');
 const politicsRoutes = require('./routes/politics');
 const leaderboardRoutes = require('./routes/leaderboard');
+const militaryRoutes = require('./routes/military');
+const economyRoutes = require('./routes/economy');
+const governanceRoutes = require('./routes/governance');
 
 const app = express();
 const httpServer = createServer(app);
@@ -46,6 +49,9 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/politics', politicsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/military', militaryRoutes);
+app.use('/api/economy', economyRoutes);
+app.use('/api/governance', governanceRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });

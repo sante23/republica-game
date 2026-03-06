@@ -1,0 +1,149 @@
+.government-page {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.government-page h1 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.policies-list {
+  display: grid;
+  gap: 20px;
+}
+
+.policy-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-left: 4px solid #3498db;
+}
+
+.policy-card h3 {
+  margin: 10px 0;
+  color: #2c3e50;
+}
+
+.policy-info {
+  display: flex;
+  gap: 20px;
+  margin: 15px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.vote-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.votes {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.votes-for {
+  color: #27ae60;
+}
+
+.votes-against {
+  color: #e74c3c;
+}
+
+.vote-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-vote {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.btn-vote.for {
+  background: #27ae60;
+  color: white;
+}
+
+.btn-vote.for:hover {
+  background: #229954;
+}
+
+.btn-vote.against {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-vote.against:hover {
+  background: #c0392b;
+}
+
+.positions-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.position-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.position-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.holder {
+  font-size: 18px;
+  margin: 10px 0;
+}
+
+.impeachments-list {
+  display: grid;
+  gap: 20px;
+}
+
+.impeachment-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-left: 4px solid #e74c3c;
+}
+
+.impeachment-header {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background: #ecf0f1;
+  border-radius: 10px;
+  margin: 15px 0;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: linear-gradient(to right, #27ae60, #2ecc71);
+  transition: width 0.3s;
+}
