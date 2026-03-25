@@ -112,6 +112,13 @@
   cursor: not-allowed;
 }
 
+.form-hint {
+  margin: 8px 0 0 0;
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
