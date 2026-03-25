@@ -44,9 +44,9 @@ const Navbar: React.FC = () => {
       </div>
       <div className="navbar-user">
         <NotificationBell />
-        <span className="user-info">
+        <Link to="/profile" className="user-info">
           Lv.{user.level} | {user.credits} G
-        </span>
+        </Link>
         <button className="logout-btn" onClick={logout}>
           <LogOut size={16} />
         </button>

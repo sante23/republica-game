@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
 import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
-import { ArrowLeft, TrendingUp, ShoppingCart, Package } from 'lucide-react';
+import { ArrowLeft, TrendingUp, ShoppingCart, Package, BarChart2 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { playSound } from '../utils/sounds';
 import CreateListingModal from '../components/CreateListingModal';
 import './Market.css';
 
@@ -30,6 +32,9 @@ const Market: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [chartResource, setChartResource] = useState('food');
+  const [showChart, setShowChart] = useState(false);
 
   useEffect(() => {
     fetchListings();
@@ -52,7 +57,8 @@ const Market: React.FC = () => {
     try {
       await api.post(`/market/buy/${listingId}`);
       fetchListings();
-      toast.success('Purchase successful! 🎉');
+      playSound('trade');
+      toast.success('Purchase successful!');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Purchase failed');
     } finally {
@@ -108,6 +114,56 @@ const Market: React.FC = () => {
             {icon} {resource.charAt(0).toUpperCase() + resource.slice(1)}
           </button>
         ))}
+      </div>
+
+      {/* Price History Chart */}
+      <div className="price-chart-section">
+        <button className="btn-chart-toggle" onClick={() => {
+          setShowChart(!showChart);
+          if (!showChart) {
+            api.get(`/market/history/${chartResource}`).then(r => setPriceHistory(r.data)).catch(() => {});
+          }
+        }}>
+          <BarChart2 size={16} /> {showChart ? 'Hide' : 'Show'} Price History
+        </button>
+
+        {showChart && (
+          <div className="price-chart-container">
+            <div className="chart-resource-selector">
+              {Object.entries(resourceIcons).map(([res, icon]) => (
+                <button
+                  key={res}
+                  className={chartResource === res ? 'active' : ''}
+                  onClick={() => {
+                    setChartResource(res);
+                    api.get(`/market/history/${res}`).then(r => setPriceHistory(r.data)).catch(() => {});
+                  }}
+                >
+                  {icon} {res}
+                </button>
+              ))}
+            </div>
+            {priceHistory.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={priceHistory.map(p => ({
+                  time: new Date(p.snapshotAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  avg: p.avgPrice,
+                  min: p.minPrice,
+                  max: p.maxPrice
+                }))}>
+                  <XAxis dataKey="time" tick={{ fill: '#718096', fontSize: 11 }} />
+                  <YAxis tick={{ fill: '#718096', fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: '#2d3748', border: 'none', borderRadius: 8, color: '#fff' }} />
+                  <Line type="monotone" dataKey="avg" stroke="#667eea" strokeWidth={2} dot={false} name="Avg Price" />
+                  <Line type="monotone" dataKey="min" stroke="#48bb78" strokeWidth={1} dot={false} name="Min" />
+                  <Line type="monotone" dataKey="max" stroke="#fc8181" strokeWidth={1} dot={false} name="Max" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="no-data">No price history yet. Data is recorded hourly.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {loading ? (

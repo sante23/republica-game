@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
-import { ArrowLeft, Users, Clock, Beaker } from 'lucide-react';
+import { ArrowLeft, Users, Beaker } from 'lucide-react';
+import CountdownTimer from '../components/CountdownTimer';
+import { playSound } from '../utils/sounds';
 import './City.css';
 
 interface CityData {
@@ -97,7 +99,9 @@ const City: React.FC = () => {
           buildings: response.data.city.buildings,
         });
       }
+      playSound('build');
     } catch (error: any) {
+      playSound('error');
       alert(error.response?.data?.error || 'Failed to build');
     } finally {
       setBuilding(false);
@@ -110,7 +114,9 @@ const City: React.FC = () => {
       await api.post('/research/start', { cityId: id, techId });
       await fetchResearch();
       await fetchCity();
+      playSound('research');
     } catch (error: any) {
+      playSound('error');
       alert(error.response?.data?.error || 'Failed to start research');
     } finally {
       setResearchingTech(null);
@@ -196,9 +202,13 @@ const City: React.FC = () => {
           {/* Currently researching */}
           {Object.entries(researches).filter(([, r]) => r.status === 'researching').map(([techId, r]) => (
             <div key={techId} className="research-progress">
-              <Clock size={16} />
               <span>Researching <strong>{techTree[techId]?.name}</strong></span>
-              <span className="research-timer">{getTimeLeft(r.completesAt)}</span>
+              <CountdownTimer
+                targetDate={r.completesAt}
+                startDate={r.startedAt}
+                showProgress={true}
+                onComplete={() => { fetchResearch(); playSound('achievement'); }}
+              />
             </div>
           ))}
 
@@ -234,7 +244,7 @@ const City: React.FC = () => {
                     {isCompleted ? (
                       <div className="tech-status-done">Completed</div>
                     ) : isResearching ? (
-                      <div className="tech-status-progress">{getTimeLeft(status.completesAt)}</div>
+                      <CountdownTimer targetDate={status.completesAt} startDate={status.startedAt} showProgress />
                     ) : (
                       <button
                         onClick={() => startResearch(techId)}

@@ -18,6 +18,8 @@ import Government from './pages/Government';
 import Achievements from './pages/Achievements';
 import Banking from './pages/Banking';
 import Contracts from './pages/Contracts';
+import Profile from './pages/Profile';
+import GameEventListener from './components/GameEventListener';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import TutorialOverlay from './components/TutorialOverlay';
@@ -34,6 +36,7 @@ function App() {
             <ToastContainer />
             <TutorialOverlay />
             <ChatPanel />
+            <GameEventListener />
             <div className="App">
               <Navbar />
               <EventsBanner />
@@ -98,6 +101,11 @@ function App() {
               <Route path="/contracts" element={
                 <ProtectedRoute>
                   <Contracts />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to="/" />} />
