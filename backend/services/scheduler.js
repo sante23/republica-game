@@ -126,8 +126,11 @@ class GameScheduler {
         city.resources[resource] = Math.max(0, (city.resources[resource] || 0) - consumption[resource]);
       }
 
-      const happinessFactor = (city.happiness - 50) / 1000;
-      city.population = Math.min(2000000000, Math.floor(city.population * (1 + happinessFactor)));
+      // Population growth: max capacity based on houses, slow linear growth
+      const maxPopulation = (city.buildings?.houses || 10) * 500;
+      const happinessFactor = (city.happiness - 50) / 100; // -0.5 to +0.5
+      const growthRate = Math.max(-5, Math.floor(happinessFactor * 3)); // -5 to +1 per tick
+      city.population = Math.max(10, Math.min(maxPopulation, city.population + growthRate));
 
       if (city.resources.food < 10) {
         city.happiness = Math.max(0, city.happiness - 5);

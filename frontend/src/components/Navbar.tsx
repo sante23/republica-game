@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Home, ShoppingCart, Vote, Trophy, Map, Sword, BarChart3, Landmark, LogOut } from "lucide-react";
+import { Home, ShoppingCart, Vote, Trophy, Map, Sword, BarChart3, Landmark, LogOut, Award, CreditCard, FileText } from "lucide-react";
 import "./Navbar.css";
 import NotificationBell from "./NotificationBell";
 
@@ -20,6 +20,9 @@ const Navbar: React.FC = () => {
     { path: "/government", icon: <Landmark size={18} />, label: "Gov" },
     { path: "/world-map", icon: <Map size={18} />, label: "Map" },
     { path: "/leaderboard", icon: <Trophy size={18} />, label: "Ranks" },
+    { path: "/banking", icon: <CreditCard size={18} />, label: "Bank" },
+    { path: "/contracts", icon: <FileText size={18} />, label: "Contracts" },
+    { path: "/achievements", icon: <Award size={18} />, label: "Awards" },
   ];
 
   return (

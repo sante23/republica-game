@@ -1,0 +1,168 @@
+.contracts-page {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.contracts-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.contracts-header h1 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 28px;
+  color: #1a202c;
+}
+
+.contracts-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  margin-bottom: 24px;
+}
+
+.contracts-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #1a202c;
+}
+
+.contracts-list { display: flex; flex-direction: column; gap: 12px; }
+
+.contract-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  gap: 12px;
+}
+
+.contract-card.pending { border-left-color: #ecc94b; background: #fffff0; }
+.contract-card.status-completed { border-left-color: #48bb78; }
+.contract-card.status-breached { border-left-color: #e53e3e; }
+.contract-card.status-cancelled { border-left-color: #a0aec0; }
+
+.contract-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+.contract-parties {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.role-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.role-badge.seller { background: #fed7d7; color: #c53030; }
+.role-badge.buyer { background: #c6f6d5; color: #276749; }
+
+.contract-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: #718096;
+}
+
+.contract-total {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.contract-progress { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #718096; }
+
+.contract-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.contract-progress-bar div {
+  height: 100%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  transition: width 0.3s;
+}
+
+.contract-next { font-size: 12px; color: #a0aec0; }
+
+.contract-actions { display: flex; gap: 8px; }
+
+.btn-accept {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #48bb78;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-reject {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fc8181;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-cancel-contract {
+  background: #e2e8f0;
+  color: #4a5568;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.status-badge.status-completed { background: #f0fff4; color: #38a169; }
+.status-badge.status-breached { background: #fff5f5; color: #e53e3e; }
+.status-badge.status-cancelled { background: #f7fafc; color: #a0aec0; }
+
+.empty-text { color: #a0aec0; font-size: 14px; }
+
+@media (max-width: 768px) {
+  .contracts-page { padding: 12px; }
+  .contracts-header h1 { font-size: 22px; }
+  .contract-card { flex-direction: column; align-items: stretch; }
+  .contract-actions { justify-content: flex-end; }
+  .contract-terms { flex-direction: column; gap: 4px; }
+}

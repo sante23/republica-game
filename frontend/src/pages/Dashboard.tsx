@@ -213,6 +213,18 @@ const Dashboard: React.FC = () => {
           <h3>Government</h3>
           <p>Propose policies and govern</p>
         </Link>
+        <Link to="/banking" className="nav-card">
+          <h3>Banking</h3>
+          <p>Loans and financial services</p>
+        </Link>
+        <Link to="/contracts" className="nav-card">
+          <h3>Contracts</h3>
+          <p>Trade agreements with players</p>
+        </Link>
+        <Link to="/achievements" className="nav-card">
+          <h3>Achievements</h3>
+          <p>Track your progress</p>
+        </Link>
       </nav>
 
       <CityFoundModal

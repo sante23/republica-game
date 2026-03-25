@@ -15,6 +15,9 @@ import WorldMap from './pages/WorldMap';
 import Military from './pages/Military';
 import Economy from './pages/Economy';
 import Government from './pages/Government';
+import Achievements from './pages/Achievements';
+import Banking from './pages/Banking';
+import Contracts from './pages/Contracts';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import TutorialOverlay from './components/TutorialOverlay';
@@ -80,6 +83,21 @@ function App() {
               <Route path="/government" element={
                 <ProtectedRoute>
                   <Government />
+                </ProtectedRoute>
+              } />
+              <Route path="/achievements" element={
+                <ProtectedRoute>
+                  <Achievements />
+                </ProtectedRoute>
+              } />
+              <Route path="/banking" element={
+                <ProtectedRoute>
+                  <Banking />
+                </ProtectedRoute>
+              } />
+              <Route path="/contracts" element={
+                <ProtectedRoute>
+                  <Contracts />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to="/" />} />
