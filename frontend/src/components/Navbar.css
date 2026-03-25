@@ -1,0 +1,161 @@
+.main-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+  padding: 0 20px;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.navbar-brand a {
+  color: #667eea;
+  font-size: 18px;
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: 2px;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #a0aec0;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+  color: white;
+  background: rgba(102, 126, 234, 0.3);
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.logout-btn {
+  background: none;
+  border: 1px solid #4a5568;
+  color: #a0aec0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  border-color: #e53e3e;
+  color: #e53e3e;
+}
+
+@media (max-width: 1024px) {
+  .nav-link span {
+    display: none;
+  }
+  .nav-link {
+    padding: 8px;
+  }
+}
+
+/* Tablet / Mobile */
+@media (max-width: 768px) {
+  .main-navbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .navbar-brand a {
+    font-size: 16px;
+  }
+
+  .navbar-links {
+    order: 3;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: center;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-link {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .nav-link span {
+    display: none;
+  }
+
+  .navbar-user {
+    gap: 8px;
+  }
+
+  .user-info {
+    font-size: 12px;
+  }
+
+  .logout-btn {
+    padding: 5px 6px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .main-navbar {
+    padding: 6px 8px;
+  }
+
+  .navbar-brand a {
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  .navbar-links {
+    gap: 1px;
+  }
+
+  .nav-link {
+    padding: 5px 6px;
+    font-size: 11px;
+  }
+
+  .user-info {
+    display: none;
+  }
+
+  .logout-btn {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+}

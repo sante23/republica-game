@@ -147,3 +147,102 @@
   background: linear-gradient(to right, #27ae60, #2ecc71);
   transition: width 0.3s;
 }
+
+/* Tablet / Mobile */
+@media (max-width: 768px) {
+  .government-page {
+    padding: 12px;
+  }
+
+  .government-page h1 {
+    font-size: 22px;
+    margin-bottom: 14px;
+  }
+
+  .policy-card {
+    padding: 14px;
+  }
+
+  .policy-info {
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .votes {
+    font-size: 16px;
+    gap: 14px;
+  }
+
+  .vote-buttons {
+    flex-direction: column;
+  }
+
+  .btn-vote {
+    padding: 12px;
+  }
+
+  .positions-list {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .position-card {
+    padding: 14px;
+  }
+
+  .position-title {
+    font-size: 20px;
+  }
+
+  .holder {
+    font-size: 16px;
+  }
+
+  .impeachment-card {
+    padding: 14px;
+  }
+
+  .impeachment-header {
+    font-size: 16px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .government-page {
+    padding: 8px;
+  }
+
+  .government-page h1 {
+    font-size: 18px;
+  }
+
+  .policy-card {
+    padding: 10px;
+  }
+
+  .policy-card h3 {
+    font-size: 15px;
+  }
+
+  .policy-info {
+    font-size: 12px;
+  }
+
+  .votes {
+    font-size: 14px;
+  }
+
+  .position-title {
+    font-size: 18px;
+  }
+
+  .holder {
+    font-size: 14px;
+  }
+
+  .progress-bar {
+    height: 16px;
+  }
+}

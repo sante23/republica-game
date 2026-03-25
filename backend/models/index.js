@@ -16,6 +16,19 @@ const PolicyVote = require('./PolicyVote');
 const { GovernmentPosition, GOVERNMENT_POSITIONS } = require('./GovernmentPosition');
 const ImpeachmentVote = require('./ImpeachmentVote');
 
+// Phase 4 Models
+const Message = require('./Message');
+const Research = require('./Research');
+const WorldEvent = require('./WorldEvent');
+const SpyMission = require('./SpyMission');
+
+// Phase 5 Models
+const MarketHistory = require('./MarketHistory');
+const Contract = require('./Contract');
+const Loan = require('./Loan');
+const Achievement = require('./Achievement');
+const ActivityLog = require('./ActivityLog');
+
 // Original relationships
 User.hasMany(City, { foreignKey: 'userId', as: 'cities' });
 City.belongsTo(User, { foreignKey: 'userId', as: 'owner' });
@@ -67,6 +80,40 @@ GovernmentPosition.belongsTo(User, { foreignKey: 'appointedBy', as: 'appointer' 
 ImpeachmentVote.belongsTo(User, { foreignKey: 'targetUserId', as: 'target' });
 ImpeachmentVote.belongsTo(User, { foreignKey: 'initiatedBy', as: 'initiator' });
 
+// Chat relationships
+Message.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
+User.hasMany(Message, { foreignKey: 'senderId', as: 'sentMessages' });
+
+// Research relationships
+Research.belongsTo(City, { foreignKey: 'cityId', as: 'city' });
+City.hasMany(Research, { foreignKey: 'cityId', as: 'researches' });
+
+// World Event relationships
+WorldEvent.belongsTo(City, { foreignKey: 'affectedCityId', as: 'affectedCity' });
+
+// Spy Mission relationships
+SpyMission.belongsTo(User, { foreignKey: 'attackerId', as: 'spy' });
+SpyMission.belongsTo(City, { foreignKey: 'targetCityId', as: 'targetCity' });
+User.hasMany(SpyMission, { foreignKey: 'attackerId', as: 'spyMissions' });
+
+// Contract relationships
+Contract.belongsTo(User, { foreignKey: 'sellerId', as: 'seller' });
+Contract.belongsTo(User, { foreignKey: 'buyerId', as: 'buyer' });
+User.hasMany(Contract, { foreignKey: 'sellerId', as: 'sellContracts' });
+User.hasMany(Contract, { foreignKey: 'buyerId', as: 'buyContracts' });
+
+// Loan relationships
+Loan.belongsTo(User, { foreignKey: 'lenderId', as: 'lender' });
+Loan.belongsTo(User, { foreignKey: 'borrowerId', as: 'borrower' });
+User.hasMany(Loan, { foreignKey: 'borrowerId', as: 'loans' });
+
+// Achievement relationships
+Achievement.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+User.hasMany(Achievement, { foreignKey: 'userId', as: 'achievements' });
+
+// Activity Log relationships
+ActivityLog.belongsTo(User, { foreignKey: 'actorId', as: 'actor' });
+
 module.exports = {
   sequelize,
   User,
@@ -85,5 +132,16 @@ module.exports = {
   PolicyVote,
   GovernmentPosition,
   GOVERNMENT_POSITIONS,
-  ImpeachmentVote
+  ImpeachmentVote,
+  // Phase 4 exports
+  Message,
+  Research,
+  WorldEvent,
+  SpyMission,
+  // Phase 5 exports
+  MarketHistory,
+  Contract,
+  Loan,
+  Achievement,
+  ActivityLog
 };

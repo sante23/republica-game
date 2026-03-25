@@ -75,6 +75,14 @@ const User = sequelize.define('User', {
   registrationDate: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+  tutorialCompleted: {
+    type: DataTypes.JSONB,
+    defaultValue: { welcome: false, foundCity: false, buildings: false, market: false, military: false, politics: false, completed: false }
+  },
+  protectedUntil: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   hooks: {

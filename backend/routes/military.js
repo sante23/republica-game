@@ -4,6 +4,8 @@ const { authenticate } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 
+const { body, validationResult } = require('express-validator');
+
 const router = express.Router();
 
 // Get military units for a city
@@ -34,19 +36,18 @@ router.get('/city/:cityId', authenticate, async (req, res) => {
 });
 
 // Train military units
-router.post('/train', authenticate, async (req, res) => {
+router.post('/train', authenticate, [
+  body('cityId').isUUID(),
+  body('unitType').isIn(['infantry', 'cavalry', 'archer', 'siege']),
+  body('quantity').isInt({ min: 1, max: 10000 })
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
   const transaction = await sequelize.transaction();
 
   try {
     const { cityId, unitType, quantity } = req.body;
-
-    if (!UNIT_TYPES[unitType]) {
-      return res.status(400).json({ error: 'Invalid unit type' });
-    }
-
-    if (quantity <= 0) {
-      return res.status(400).json({ error: 'Invalid quantity' });
-    }
 
     // Verify ownership
     const city = await City.findByPk(cityId, { transaction, lock: true });
@@ -112,11 +113,22 @@ router.post('/train', authenticate, async (req, res) => {
 });
 
 // Attack another city
-router.post('/attack', authenticate, async (req, res) => {
+router.post('/attack', authenticate, [
+  body('attackerCityId').isUUID(),
+  body('defenderCityId').isUUID(),
+  body('units').isObject()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
   const transaction = await sequelize.transaction();
 
   try {
     const { attackerCityId, defenderCityId, units } = req.body;
+
+    if (attackerCityId === defenderCityId) {
+      return res.status(400).json({ error: 'Cannot attack your own city' });
+    }
 
     // Get attacker city
     const attackerCity = await City.findByPk(attackerCityId, { transaction, lock: true });
@@ -134,6 +146,18 @@ router.post('/attack', authenticate, async (req, res) => {
     if (!defenderCity) {
       await transaction.rollback();
       return res.status(404).json({ error: 'Defender city not found' });
+    }
+
+    // Check newbie protection
+    const defender = defenderCity.owner;
+    if (defender.protectedUntil && new Date(defender.protectedUntil) > new Date()) {
+      await transaction.rollback();
+      const hoursLeft = Math.ceil((new Date(defender.protectedUntil) - new Date()) / (1000 * 60 * 60));
+      return res.status(400).json({ error: `This player is under newbie protection for ${hoursLeft} more hours` });
+    }
+    if (defender.level < 5) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Cannot attack players below level 5' });
     }
 
     // Check alliance
@@ -165,7 +189,16 @@ router.post('/attack', authenticate, async (req, res) => {
       transaction
     });
 
-    // Calculate battle outcome
+    // Rock-paper-scissors unit advantages
+    // infantry > archer > cavalry > infantry, siege weak vs all defense
+    const TYPE_ADVANTAGES = {
+      infantry: { strong: 'archer', weak: 'cavalry' },
+      cavalry: { strong: 'infantry', weak: 'archer' },
+      archer: { strong: 'cavalry', weak: 'infantry' },
+      siege: { strong: null, weak: null } // siege is pure offense, no type bonus
+    };
+
+    // Calculate battle outcome with type advantages
     let attackerPower = 0;
     let defenderPower = 0;
 
@@ -173,17 +206,38 @@ router.post('/attack', authenticate, async (req, res) => {
     for (const unit of attackerUnits) {
       attackerUnitsMap[unit.unitType] = unit;
       const unitsToUse = Math.min(units[unit.unitType] || 0, unit.quantity);
-      attackerPower += unitsToUse * unit.attackPower;
+      let power = unitsToUse * unit.attackPower;
+      // Apply type advantage bonuses against defender composition
+      const adv = TYPE_ADVANTAGES[unit.unitType];
+      if (adv) {
+        for (const dUnit of defenderUnits) {
+          if (dUnit.unitType === adv.strong) power *= 1.25; // 25% bonus vs weak type
+          if (dUnit.unitType === adv.weak) power *= 0.8;    // 20% penalty vs strong type
+        }
+      }
+      attackerPower += power;
     }
 
     const defenderUnitsMap = {};
     for (const unit of defenderUnits) {
       defenderUnitsMap[unit.unitType] = unit;
-      defenderPower += unit.quantity * unit.defensePower;
+      let power = unit.quantity * unit.defensePower;
+      const adv = TYPE_ADVANTAGES[unit.unitType];
+      if (adv) {
+        for (const aUnit of attackerUnits) {
+          const usedQty = units[aUnit.unitType] || 0;
+          if (usedQty > 0 && aUnit.unitType === adv.strong) power *= 1.25;
+          if (usedQty > 0 && aUnit.unitType === adv.weak) power *= 0.8;
+        }
+      }
+      defenderPower += power;
     }
 
-    // Add city defense bonus
-    defenderPower *= 1.2;
+    // City defense bonus: base 1.2 + 0.1 per wall level
+    const wallLevel = defenderCity.buildings?.walls || 0;
+    const towerLevel = defenderCity.buildings?.towers || 0;
+    const cityDefenseBonus = 1.2 + (wallLevel * 0.1) + (towerLevel * 0.05);
+    defenderPower *= cityDefenseBonus;
 
     const outcome = attackerPower > defenderPower ? 'attacker_win' : 'defender_win';
 
@@ -218,10 +272,13 @@ router.post('/attack', authenticate, async (req, res) => {
       });
     }
 
-    // Plunder resources if attacker wins
+    // Plunder resources if attacker wins — dynamic scaling
     let resourcesPlundered = {};
     if (outcome === 'attacker_win') {
-      const plunderRate = 0.2;
+      // Base 20%, reduced by walls (-2% per level), scaled by level difference
+      const levelDiff = (req.user.level || 1) - (defender.level || 1);
+      const wallReduction = wallLevel * 0.02;
+      const plunderRate = Math.max(0.05, Math.min(0.35, 0.2 + (levelDiff * 0.01) - wallReduction));
       resourcesPlundered = {
         food: Math.floor(defenderCity.resources.food * plunderRate),
         wood: Math.floor(defenderCity.resources.wood * plunderRate),
@@ -295,7 +352,7 @@ router.get('/battles', authenticate, async (req, res) => {
         { model: City, as: 'attackerCity', attributes: ['name'] },
         { model: City, as: 'defenderCity', attributes: ['name'] }
       ],
-      order: [['battleDate', 'DESC']],
+      order: [['battle_date', 'DESC']],
       limit: 50
     });
 

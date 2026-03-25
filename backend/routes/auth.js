@@ -46,6 +46,10 @@ router.post('/register', [
     
     const token = generateToken(user.id);
     
+    // Set 72h newbie protection
+    user.protectedUntil = new Date(Date.now() + 72 * 60 * 60 * 1000);
+    await user.save();
+
     res.status(201).json({
       message: 'Registration successful',
       token,
@@ -54,7 +58,9 @@ router.post('/register', [
         username: user.username,
         email: user.email,
         level: user.level,
-        credits: user.credits
+        credits: user.credits,
+        tutorialCompleted: user.tutorialCompleted,
+        protectedUntil: user.protectedUntil
       }
     });
   } catch (error) {
@@ -96,7 +102,9 @@ router.post('/login', [
         level: user.level,
         credits: user.credits,
         premiumCredits: user.premiumCredits,
-        reputation: user.reputation
+        reputation: user.reputation,
+        tutorialCompleted: user.tutorialCompleted,
+        protectedUntil: user.protectedUntil
       }
     });
   } catch (error) {
@@ -119,9 +127,29 @@ router.get('/me', authenticate, async (req, res) => {
       worldId: req.user.worldId,
       partyId: req.user.partyId,
       corporationId: req.user.corporationId,
-      isPremium: req.user.isPremium
+      isPremium: req.user.isPremium,
+      tutorialCompleted: req.user.tutorialCompleted,
+      protectedUntil: req.user.protectedUntil
     }
   });
+});
+
+// Update tutorial progress
+router.put('/tutorial', authenticate, async (req, res) => {
+  try {
+    const { step } = req.body;
+    const validSteps = ['welcome', 'foundCity', 'buildings', 'market', 'military', 'politics', 'completed'];
+    if (!validSteps.includes(step)) {
+      return res.status(400).json({ error: 'Invalid tutorial step' });
+    }
+    const tutorial = { ...req.user.tutorialCompleted, [step]: true };
+    req.user.tutorialCompleted = tutorial;
+    await req.user.save();
+    res.json({ tutorialCompleted: tutorial });
+  } catch (error) {
+    console.error('Tutorial update error:', error);
+    res.status(500).json({ error: 'Failed to update tutorial' });
+  }
 });
 
 router.post('/logout', authenticate, (req, res) => {

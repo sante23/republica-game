@@ -12,7 +12,7 @@ const GovernmentPosition = sequelize.define('GovernmentPosition', {
     allowNull: false
   },
   position: {
-    type: DataTypes.ENUM('president', 'minister_economy', 'minister_defense'),
+    type: DataTypes.ENUM('president', 'governor', 'mayor', 'minister_economy', 'minister_defense'),
     allowNull: false
   },
   userId: {
@@ -35,6 +35,18 @@ const GovernmentPosition = sequelize.define('GovernmentPosition', {
       model: 'Users',
       key: 'id'
     }
+  },
+  cityId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'Cities',
+      key: 'id'
+    }
+  },
+  regionId: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   }
 }, {
   tableName: 'government_positions',
@@ -42,13 +54,22 @@ const GovernmentPosition = sequelize.define('GovernmentPosition', {
   underscored: true,
   indexes: [
     {
-      unique: true,
       fields: ['world_id', 'position']
     }
   ]
 });
 
 const GOVERNMENT_POSITIONS = {
+  mayor: {
+    name: 'Mayor',
+    powers: ['setLocalTax', 'cityDevelopment', 'localPolicies'],
+    term: 30 * 24 * 60 * 60 * 1000
+  },
+  governor: {
+    name: 'Governor',
+    powers: ['regionalTrade', 'infrastructure', 'regionalPolicies'],
+    term: 45 * 24 * 60 * 60 * 1000
+  },
   president: {
     name: 'President',
     powers: ['appointMinisters', 'vetoLaws', 'declareMartialLaw'],

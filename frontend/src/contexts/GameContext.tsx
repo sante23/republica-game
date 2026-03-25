@@ -47,8 +47,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     if (user) {
-      const newSocket = io('http://localhost:5000', {
-        transports: ['websocket'],
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const wsUrl = apiUrl.replace('/api', '');
+      const newSocket = io(wsUrl, {
+        transports: ['websocket', 'polling'],
       });
 
       newSocket.on('connect', () => {

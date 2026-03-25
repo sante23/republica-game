@@ -1,4 +1,5 @@
 const express = require('express');
+const { cache } = require('../config/redis');
 const { Market, City, User } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
@@ -101,6 +102,7 @@ router.post('/sell', [
       city: city.name
     });
     
+    await cache.delPattern('market-listings:*');
     res.status(201).json({
       message: 'Listing created successfully',
       listing
@@ -112,6 +114,7 @@ router.post('/sell', [
 });
 
 router.post('/buy/:id', authenticate, async (req, res) => {
+  const transaction = await require('../config/database').transaction();
   try {
     const listing = await Market.findOne({
       where: {
@@ -121,50 +124,73 @@ router.post('/buy/:id', authenticate, async (req, res) => {
       include: [{
         model: City,
         as: 'city'
-      }]
+      }],
+      lock: true,
+      transaction
     });
     
     if (!listing) {
+      await transaction.rollback();
       return res.status(404).json({ error: 'Listing not found or no longer available' });
     }
     
     if (listing.sellerId === req.user.id) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'Cannot buy your own listing' });
     }
     
     const totalCost = listing.quantity * listing.pricePerUnit;
     
-    if (req.user.credits < totalCost) {
+    // Re-fetch user with lock to prevent race condition
+    const buyer = await User.findByPk(req.user.id, { lock: true, transaction });
+    
+    if (buyer.credits < totalCost) {
+      await transaction.rollback();
       return res.status(400).json({ 
-        error: `Insufficient credits. Need ${totalCost}, have ${req.user.credits}` 
+        error: `Insufficient credits. Need ${totalCost}, have ${buyer.credits}` 
       });
     }
     
     const buyerCity = await City.findOne({
       where: { userId: req.user.id },
-      order: [['isCapital', 'DESC']]
+      order: [['isCapital', 'DESC']],
+      lock: true,
+      transaction
     });
     
     if (!buyerCity) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'You need a city to buy resources' });
     }
     
-    req.user.credits -= totalCost;
-    await req.user.save();
+    buyer.credits -= totalCost;
+    await buyer.save({ transaction });
     
-    const seller = await User.findByPk(listing.sellerId);
+    const seller = await User.findByPk(listing.sellerId, { lock: true, transaction });
     seller.credits += totalCost;
-    await seller.save();
+    await seller.save({ transaction });
     
     buyerCity.resources[listing.resource] = 
       (buyerCity.resources[listing.resource] || 0) + listing.quantity;
     buyerCity.changed('resources', true);
-    await buyerCity.save();
+    await buyerCity.save({ transaction });
     
     listing.status = 'SOLD';
     listing.buyerId = req.user.id;
     listing.completedAt = new Date();
-    await listing.save();
+    await listing.save({ transaction });
+    
+    await transaction.commit();
+
+    // Notify seller
+    const notifier = req.app.get('notificationService');
+    if (notifier) {
+      await notifier.send(listing.sellerId, 'MARKET_SOLD',
+        'Item sold!',
+        `Your ${listing.quantity} ${listing.resource} was bought by ${buyer.username} for ${totalCost} credits.`,
+        { listingId: listing.id, resource: listing.resource, quantity: listing.quantity, totalCost }
+      );
+    }
     
     const io = req.app.get('io');
     io.to(`world-${listing.worldId}`).emit('market-transaction', {
@@ -173,7 +199,7 @@ router.post('/buy/:id', authenticate, async (req, res) => {
       quantity: listing.quantity,
       price: totalCost,
       seller: seller.username,
-      buyer: req.user.username
+      buyer: buyer.username
     });
     
     res.json({
@@ -182,11 +208,12 @@ router.post('/buy/:id', authenticate, async (req, res) => {
         resource: listing.resource,
         quantity: listing.quantity,
         totalCost,
-        newCredits: req.user.credits,
+        newCredits: buyer.credits,
         newResources: buyerCity.resources[listing.resource]
       }
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error buying listing:', error);
     res.status(500).json({ error: 'Failed to complete purchase' });
   }
@@ -229,6 +256,25 @@ router.delete('/cancel/:id', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error cancelling listing:', error);
     res.status(500).json({ error: 'Failed to cancel listing' });
+  }
+});
+
+// Get price history for a resource
+router.get('/history/:resource', authenticate, async (req, res) => {
+  try {
+    const { MarketHistory } = require('../models');
+    const history = await MarketHistory.findAll({
+      where: {
+        worldId: req.user.worldId || 1,
+        resource: req.params.resource
+      },
+      order: [['snapshotAt', 'ASC']],
+      limit: 168 // 7 days of hourly snapshots
+    });
+    res.json(history);
+  } catch (error) {
+    console.error('Error fetching price history:', error);
+    res.status(500).json({ error: 'Failed to fetch price history' });
   }
 });
 

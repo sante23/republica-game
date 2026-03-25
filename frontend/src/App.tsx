@@ -16,6 +16,10 @@ import Military from './pages/Military';
 import Economy from './pages/Economy';
 import Government from './pages/Government';
 import ProtectedRoute from './components/ProtectedRoute';
+import Navbar from './components/Navbar';
+import TutorialOverlay from './components/TutorialOverlay';
+import ChatPanel from './components/ChatPanel';
+import EventsBanner from './components/EventsBanner';
 import './App.css';
 
 function App() {
@@ -25,7 +29,11 @@ function App() {
         <ToastProvider>
           <GameProvider>
             <ToastContainer />
+            <TutorialOverlay />
+            <ChatPanel />
             <div className="App">
+              <Navbar />
+              <EventsBanner />
               <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

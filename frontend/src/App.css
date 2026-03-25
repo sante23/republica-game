@@ -40,3 +40,14 @@ body {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Global button fix */
+.btn-primary {
+  width: fit-content;
+  white-space: nowrap;
+}
+
+/* Navbar body offset */
+.App {
+  padding-top: 0;
+}

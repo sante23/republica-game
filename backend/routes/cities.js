@@ -1,4 +1,5 @@
 const express = require('express');
+const { cache } = require('../config/redis');
 const { City, User } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
@@ -88,6 +89,36 @@ router.post('/create', [
   }
 });
 
+
+// Get all cities in the world (for world map)
+router.get("/world", authenticate, async (req, res) => {
+  try {
+    const worldId = req.user.worldId || 1;
+    const cacheKey = `world-cities:${worldId}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.json({ cities: cached });
+    }
+
+    const cities = await City.findAll({
+      where: { worldId },
+      include: [{
+        model: User,
+        as: "owner",
+        attributes: ["username", "level"]
+      }],
+      order: [["population", "DESC"]],
+      limit: 500
+    });
+    
+    await cache.set(cacheKey, cities, 30);
+    res.json({ cities });
+  } catch (error) {
+    console.error("Error fetching world cities:", error);
+    res.status(500).json({ error: "Failed to fetch world cities" });
+  }
+});
+
 router.get('/:id', authenticate, async (req, res) => {
   try {
     const city = await City.findByPk(req.params.id, {
@@ -138,7 +169,9 @@ router.put('/:id/build', [
       farms: { wood: 100, gold: 20 },
       sawmills: { stone: 50, gold: 30 },
       mines: { wood: 75, stone: 100, gold: 50 },
-      markets: { wood: 100, stone: 100, gold: 100 }
+      markets: { wood: 100, stone: 100, gold: 100 },
+      walls: { stone: 200, iron: 100, gold: 75 },
+      towers: { stone: 150, iron: 150, gold: 100 }
     };
     
     const cost = buildingCosts[building];

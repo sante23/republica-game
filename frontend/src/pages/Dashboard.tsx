@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
-import { Building, Coins, Users, TrendingUp, Globe, Award } from 'lucide-react';
+import { Building, Coins, Users, TrendingUp, Globe, Award, Shield } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CityFoundModal from '../components/CityFoundModal';
 import './Dashboard.css';
 
@@ -21,6 +22,15 @@ const Dashboard: React.FC = () => {
     return sum + cityTotal;
   }, 0);
 
+  // Production chart data
+  const productionData = cities.length > 0 ? [
+    { name: 'Food', value: cities.reduce((s, c) => s + (c.production?.food || 0), 0) },
+    { name: 'Wood', value: cities.reduce((s, c) => s + (c.production?.wood || 0), 0) },
+    { name: 'Stone', value: cities.reduce((s, c) => s + (c.production?.stone || 0), 0) },
+    { name: 'Iron', value: cities.reduce((s, c) => s + (c.production?.iron || 0), 0) },
+    { name: 'Gold', value: cities.reduce((s, c) => s + (c.production?.gold || 0), 0) },
+  ] : [];
+
   const handleFoundCity = async (name: string, x: number, y: number) => {
     const result = await createCity(name, x, y);
     if (result.success) {
@@ -30,19 +40,33 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Newbie protection status
+  const isProtected = user?.protectedUntil && new Date(user.protectedUntil) > new Date();
+  const protectionHoursLeft = isProtected
+    ? Math.ceil((new Date(user!.protectedUntil!).getTime() - Date.now()) / (1000 * 60 * 60))
+    : 0;
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <h1>Welcome back, {user?.username}!</h1>
+        <div>
+          <h1>Welcome back, {user?.username}!</h1>
+          {isProtected && (
+            <div className="protection-badge">
+              <Shield size={14} />
+              Newbie Protection: {protectionHoursLeft}h remaining
+            </div>
+          )}
+        </div>
         <div className="user-stats">
           <span className="stat">
-            <Award /> Level {user?.level}
+            <Award size={16} /> Level {user?.level}
           </span>
           <span className="stat">
-            <Coins /> {user?.credits} Credits
+            <Coins size={16} /> {user?.credits} Credits
           </span>
           <span className="stat">
-            <Globe /> World #{user?.worldId}
+            <Globe size={16} /> World #{user?.worldId}
           </span>
         </div>
       </header>
@@ -85,6 +109,32 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Production Chart */}
+      {productionData.length > 0 && (
+        <div className="production-chart-section">
+          <h2>Total Production (per hour)</h2>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={productionData}>
+                <XAxis dataKey="name" tick={{ fill: '#718096', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#718096', fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{ background: '#2d3748', border: 'none', borderRadius: 8, color: '#fff' }}
+                  labelStyle={{ color: '#a0aec0' }}
+                />
+                <Bar dataKey="value" fill="url(#productionGradient)" radius={[4, 4, 0, 0]} />
+                <defs>
+                  <linearGradient id="productionGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#667eea" />
+                    <stop offset="100%" stopColor="#764ba2" />
+                  </linearGradient>
+                </defs>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       <div className="cities-section">
         <div className="section-header">
           <h2>Your Cities</h2>
@@ -116,19 +166,17 @@ const Dashboard: React.FC = () => {
                     <span>{city.population.toLocaleString()}</span>
                   </div>
                   <div className="city-stat">
-                    <span>😊</span>
-                    <span>{city.happiness}%</span>
+                    <span>Happiness {city.happiness}%</span>
                   </div>
                   <div className="city-stat">
-                    <span>📍</span>
                     <span>({city.x}, {city.y})</span>
                   </div>
                 </div>
                 <div className="city-resources">
-                  <div className="resource">🌾 {Math.floor(city.resources.food)}</div>
-                  <div className="resource">🪵 {Math.floor(city.resources.wood)}</div>
-                  <div className="resource">🪨 {Math.floor(city.resources.stone)}</div>
-                  <div className="resource">🪙 {Math.floor(city.resources.gold)}</div>
+                  <div className="resource">Food {Math.floor(city.resources.food)}</div>
+                  <div className="resource">Wood {Math.floor(city.resources.wood)}</div>
+                  <div className="resource">Stone {Math.floor(city.resources.stone)}</div>
+                  <div className="resource">Gold {Math.floor(city.resources.gold)}</div>
                 </div>
               </Link>
             ))}
@@ -138,31 +186,31 @@ const Dashboard: React.FC = () => {
 
       <nav className="dashboard-nav">
         <Link to="/market" className="nav-card">
-          <h3>🏪 Marketplace</h3>
+          <h3>Marketplace</h3>
           <p>Trade resources with other players</p>
         </Link>
         <Link to="/politics" className="nav-card">
-          <h3>🗳️ Politics</h3>
+          <h3>Politics</h3>
           <p>Vote and run for office</p>
         </Link>
         <Link to="/leaderboard" className="nav-card">
-          <h3>🏆 Leaderboard</h3>
+          <h3>Leaderboard</h3>
           <p>See top players</p>
         </Link>
         <Link to="/world-map" className="nav-card">
-          <h3>🗺️ World Map</h3>
+          <h3>World Map</h3>
           <p>Explore cities around the world</p>
         </Link>
         <Link to="/military" className="nav-card">
-          <h3>⚔️ Military</h3>
+          <h3>Military</h3>
           <p>Train units and wage war</p>
         </Link>
         <Link to="/economy" className="nav-card">
-          <h3>📊 Economy</h3>
+          <h3>Economy</h3>
           <p>Manage trade routes and taxes</p>
         </Link>
         <Link to="/government" className="nav-card">
-          <h3>🏛️ Government</h3>
+          <h3>Government</h3>
           <p>Propose policies and govern</p>
         </Link>
       </nav>

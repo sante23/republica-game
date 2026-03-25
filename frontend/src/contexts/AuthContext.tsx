@@ -12,6 +12,8 @@ interface User {
   reputation: number;
   worldId: number;
   isPremium: boolean;
+  tutorialCompleted: Record<string, boolean>;
+  protectedUntil: string | null;
 }
 
 interface AuthContextType {

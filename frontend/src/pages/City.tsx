@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
-import { ArrowLeft, Building, Users, Hammer, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Users, Clock, Beaker } from 'lucide-react';
 import './City.css';
 
 interface CityData {
@@ -14,15 +14,35 @@ interface CityData {
   production: Record<string, number>;
 }
 
+interface TechInfo {
+  name: string;
+  cost: Record<string, number>;
+  time: number;
+  requires: string[];
+  effects: Record<string, any>;
+  category: string;
+}
+
+interface ResearchStatus {
+  status: string;
+  startedAt: string;
+  completesAt: string;
+}
+
 const City: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [city, setCity] = useState<CityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [building, setBuilding] = useState(false);
+  const [techTree, setTechTree] = useState<Record<string, TechInfo>>({});
+  const [researches, setResearches] = useState<Record<string, ResearchStatus>>({});
+  const [showResearch, setShowResearch] = useState(false);
+  const [researchingTech, setResearchingTech] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCity();
+    fetchResearch();
     const interval = setInterval(updateProduction, 30000);
     return () => clearInterval(interval);
   }, [id]);
@@ -35,6 +55,16 @@ const City: React.FC = () => {
       console.error('Failed to fetch city:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchResearch = async () => {
+    try {
+      const response = await api.get(`/research/city/${id}`);
+      setTechTree(response.data.techTree);
+      setResearches(response.data.researches);
+    } catch (error) {
+      console.error('Failed to fetch research:', error);
     }
   };
 
@@ -74,13 +104,39 @@ const City: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <div className="loading">Loading city...</div>;
-  }
+  const startResearch = async (techId: string) => {
+    setResearchingTech(techId);
+    try {
+      await api.post('/research/start', { cityId: id, techId });
+      await fetchResearch();
+      await fetchCity();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to start research');
+    } finally {
+      setResearchingTech(null);
+    }
+  };
 
-  if (!city) {
-    return <div>City not found</div>;
-  }
+  const getTimeLeft = (completesAt: string) => {
+    const diff = new Date(completesAt).getTime() - Date.now();
+    if (diff <= 0) return 'Done!';
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(mins / 60);
+    return hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`;
+  };
+
+  if (loading) return <div className="loading">Loading city...</div>;
+  if (!city) return <div>City not found</div>;
+
+  const BUILDING_INFO: Record<string, { icon: string; cost: string }> = {
+    houses: { icon: 'Houses', cost: '50 Wood, 25 Stone, 10 Gold' },
+    farms: { icon: 'Farms', cost: '100 Wood, 20 Gold' },
+    sawmills: { icon: 'Sawmills', cost: '50 Stone, 30 Gold' },
+    mines: { icon: 'Mines', cost: '75 Wood, 100 Stone, 50 Gold' },
+    markets: { icon: 'Markets', cost: '100 Wood, 100 Stone, 100 Gold' },
+    walls: { icon: 'Walls', cost: '200 Stone, 100 Iron, 75 Gold' },
+    towers: { icon: 'Towers', cost: '150 Stone, 150 Iron, 100 Gold' },
+  };
 
   return (
     <div className="city-page">
@@ -90,8 +146,8 @@ const City: React.FC = () => {
         </button>
         <h1>{city.name}</h1>
         <div className="city-info">
-          <span><Users /> {city.population.toLocaleString()}</span>
-          <span>😊 {city.happiness}%</span>
+          <span><Users size={16} /> {city.population.toLocaleString()}</span>
+          <span>Happiness {city.happiness}%</span>
         </div>
       </header>
 
@@ -99,36 +155,13 @@ const City: React.FC = () => {
         <section className="resources-panel">
           <h2>Resources</h2>
           <div className="resources-list">
-            <div className="resource-item">
-              <span>🌾 Food</span>
-              <span>{Math.floor(city.resources.food || 0)}</span>
-              <span className="production">+{city.production.food || 0}/h</span>
-            </div>
-            <div className="resource-item">
-              <span>🪵 Wood</span>
-              <span>{Math.floor(city.resources.wood || 0)}</span>
-              <span className="production">+{city.production.wood || 0}/h</span>
-            </div>
-            <div className="resource-item">
-              <span>🪨 Stone</span>
-              <span>{Math.floor(city.resources.stone || 0)}</span>
-              <span className="production">+{city.production.stone || 0}/h</span>
-            </div>
-            <div className="resource-item">
-              <span>⚙️ Iron</span>
-              <span>{Math.floor(city.resources.iron || 0)}</span>
-              <span className="production">+{city.production.iron || 0}/h</span>
-            </div>
-            <div className="resource-item">
-              <span>🪙 Gold</span>
-              <span>{Math.floor(city.resources.gold || 0)}</span>
-              <span className="production">+{city.production.gold || 0}/h</span>
-            </div>
-            <div className="resource-item">
-              <span>⚡ Energy</span>
-              <span>{Math.floor(city.resources.energy || 0)}</span>
-              <span className="production">+{city.production.energy || 0}/h</span>
-            </div>
+            {['food', 'wood', 'stone', 'iron', 'gold', 'energy'].map(res => (
+              <div className="resource-item" key={res}>
+                <span className="resource-name">{res.charAt(0).toUpperCase() + res.slice(1)}</span>
+                <span className="resource-amount">{Math.floor(city.resources[res] || 0)}</span>
+                <span className="production">+{city.production[res] || 0}/h</span>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -136,45 +169,85 @@ const City: React.FC = () => {
           <h2>Buildings</h2>
           <div className="buildings-grid">
             <div className="building-card">
-              <h3>🏛️ Town Hall</h3>
+              <h3>Town Hall</h3>
               <p>Level {city.buildings.townHall || 1}</p>
             </div>
-            <div className="building-card">
-              <h3>🏠 Houses</h3>
-              <p>Count: {city.buildings.houses || 0}</p>
-              <button onClick={() => buildStructure('houses')} disabled={building}>
-                Build (50🪵 25🪨 10🪙)
-              </button>
-            </div>
-            <div className="building-card">
-              <h3>🌾 Farms</h3>
-              <p>Count: {city.buildings.farms || 0}</p>
-              <button onClick={() => buildStructure('farms')} disabled={building}>
-                Build (100🪵 20🪙)
-              </button>
-            </div>
-            <div className="building-card">
-              <h3>🪵 Sawmills</h3>
-              <p>Count: {city.buildings.sawmills || 0}</p>
-              <button onClick={() => buildStructure('sawmills')} disabled={building}>
-                Build (50🪨 30🪙)
-              </button>
-            </div>
-            <div className="building-card">
-              <h3>⛏️ Mines</h3>
-              <p>Count: {city.buildings.mines || 0}</p>
-              <button onClick={() => buildStructure('mines')} disabled={building}>
-                Build (75🪵 100🪨 50🪙)
-              </button>
-            </div>
-            <div className="building-card">
-              <h3>🏪 Markets</h3>
-              <p>Count: {city.buildings.markets || 0}</p>
-              <button onClick={() => buildStructure('markets')} disabled={building}>
-                Build (100🪵 100🪨 100🪙)
-              </button>
-            </div>
+            {Object.entries(BUILDING_INFO).map(([key, info]) => (
+              <div className="building-card" key={key}>
+                <h3>{info.icon}</h3>
+                <p>Count: {city.buildings[key] || 0}</p>
+                <button onClick={() => buildStructure(key)} disabled={building}>
+                  Build ({info.cost})
+                </button>
+              </div>
+            ))}
           </div>
+        </section>
+
+        {/* Research Panel */}
+        <section className="research-panel">
+          <div className="section-header">
+            <h2><Beaker size={18} /> Research</h2>
+            <button className="btn-toggle" onClick={() => setShowResearch(!showResearch)}>
+              {showResearch ? 'Hide' : 'Show'} Tech Tree
+            </button>
+          </div>
+
+          {/* Currently researching */}
+          {Object.entries(researches).filter(([, r]) => r.status === 'researching').map(([techId, r]) => (
+            <div key={techId} className="research-progress">
+              <Clock size={16} />
+              <span>Researching <strong>{techTree[techId]?.name}</strong></span>
+              <span className="research-timer">{getTimeLeft(r.completesAt)}</span>
+            </div>
+          ))}
+
+          {showResearch && (
+            <div className="tech-tree-grid">
+              {Object.entries(techTree).map(([techId, tech]) => {
+                const status = researches[techId];
+                const isCompleted = status?.status === 'completed';
+                const isResearching = status?.status === 'researching';
+                const hasPrereqs = tech.requires.every(r => researches[r]?.status === 'completed');
+                const isAnyResearching = Object.values(researches).some(r => r.status === 'researching');
+
+                return (
+                  <div
+                    key={techId}
+                    className={`tech-card ${isCompleted ? 'completed' : ''} ${isResearching ? 'researching' : ''} ${!hasPrereqs ? 'locked' : ''}`}
+                  >
+                    <div className="tech-header">
+                      <h4>{tech.name}</h4>
+                      <span className={`tech-category cat-${tech.category}`}>{tech.category}</span>
+                    </div>
+                    <div className="tech-cost">
+                      {Object.entries(tech.cost).map(([res, amt]) => (
+                        <span key={res}>{amt} {res}</span>
+                      ))}
+                    </div>
+                    <div className="tech-time">{Math.round(tech.time / 60)}min</div>
+                    {tech.requires.length > 0 && (
+                      <div className="tech-requires">
+                        Requires: {tech.requires.map(r => techTree[r]?.name).join(', ')}
+                      </div>
+                    )}
+                    {isCompleted ? (
+                      <div className="tech-status-done">Completed</div>
+                    ) : isResearching ? (
+                      <div className="tech-status-progress">{getTimeLeft(status.completesAt)}</div>
+                    ) : (
+                      <button
+                        onClick={() => startResearch(techId)}
+                        disabled={!hasPrereqs || isAnyResearching || researchingTech === techId}
+                      >
+                        {!hasPrereqs ? 'Locked' : isAnyResearching ? 'Busy' : 'Research'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="city-map">
@@ -183,10 +256,12 @@ const City: React.FC = () => {
             <div className="city-grid">
               {Array.from({ length: 25 }).map((_, i) => (
                 <div key={i} className="grid-tile">
-                  {i === 12 && '🏛️'}
-                  {[0, 4, 20, 24].includes(i) && '🏠'}
-                  {[6, 8, 16, 18].includes(i) && '🌾'}
-                  {[10, 14].includes(i) && '🪵'}
+                  {i === 12 && 'Town Hall'}
+                  {[0, 4, 20, 24].includes(i) && (city.buildings.houses > 0 ? 'House' : '')}
+                  {[6, 8, 16, 18].includes(i) && (city.buildings.farms > 0 ? 'Farm' : '')}
+                  {[10, 14].includes(i) && (city.buildings.sawmills > 0 ? 'Mill' : '')}
+                  {[1, 3, 21, 23].includes(i) && (city.buildings.walls > 0 ? 'Wall' : '')}
+                  {[2, 22].includes(i) && (city.buildings.towers > 0 ? 'Tower' : '')}
                 </div>
               ))}
             </div>

@@ -198,3 +198,106 @@
   background: #f8d7da;
   color: #721c24;
 }
+
+/* Tablet / Mobile */
+@media (max-width: 768px) {
+  .military-page {
+    padding: 12px;
+  }
+
+  .military-page h1 {
+    font-size: 22px;
+    margin-bottom: 14px;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tabs button {
+    flex: 1 1 45%;
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .units-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .unit-card {
+    padding: 14px;
+  }
+
+  .unit-icon {
+    font-size: 36px;
+  }
+
+  .train-controls {
+    flex-direction: column;
+  }
+
+  .train-controls button {
+    width: 100%;
+  }
+
+  .battle-card, .alliance-card {
+    padding: 14px;
+  }
+
+  .battle-details {
+    font-size: 13px;
+    overflow-x: auto;
+  }
+
+  .city-selector {
+    padding: 10px;
+  }
+
+  .city-selector select {
+    margin-left: 0;
+    margin-top: 8px;
+    width: 100%;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .military-page {
+    padding: 8px;
+  }
+
+  .military-page h1 {
+    font-size: 18px;
+  }
+
+  .tabs button {
+    flex: 1 1 100%;
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .unit-card h3 {
+    font-size: 15px;
+  }
+
+  .unit-stats {
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  .unit-cost span {
+    font-size: 11px;
+  }
+
+  .status {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .outcome {
+    font-size: 13px;
+    padding: 3px 8px;
+  }
+}
