@@ -137,44 +137,40 @@ router.get('/alliances', authenticate, async (req, res) => {
     const alliances = await Alliance.findAll({
       where: { status: 'active' },
       include: [
-        { model: User, as: 'player1', attributes: ['id', 'username', 'level', 'credits', 'worldId'] },
-        { model: User, as: 'player2', attributes: ['id', 'username', 'level', 'credits', 'worldId'] }
+        { model: User, as: 'player1', attributes: ['id', 'username', 'level', 'credits', 'worldId', 'reputation'] },
+        { model: User, as: 'player2', attributes: ['id', 'username', 'level', 'credits', 'worldId', 'reputation'] }
       ]
     });
 
-    // Group alliances by player pairs and compute combined stats
-    const allianceGroups = {};
+    // Build alliance rankings
+    const rankings = [];
     for (const alliance of alliances) {
-      if (alliance.player1?.worldId !== worldId && alliance.player2?.worldId !== worldId) continue;
+      const p1 = alliance.player1;
+      const p2 = alliance.player2;
+      if (!p1 || !p2) continue;
+      if (p1.worldId !== worldId && p2.worldId !== worldId) continue;
 
-      const key = [alliance.player1Id, alliance.player2Id].sort().join('-');
-      if (!allianceGroups[key]) {
-        allianceGroups[key] = {
-          players: [
-            { username: alliance.player1?.username, level: alliance.player1?.level },
-            { username: alliance.player2?.username, level: alliance.player2?.level }
-          ],
-          combinedLevel: (alliance.player1?.level || 0) + (alliance.player2?.level || 0),
-          combinedCredits: (alliance.player1?.credits || 0) + (alliance.player2?.credits || 0),
-          since: alliance.acceptedAt
-        };
-      }
-    }
-
-    // Get city counts and population for alliance members
-    for (const key of Object.keys(allianceGroups)) {
-      const [p1, p2] = key.split('-');
       const cities = await City.findAll({
-        where: { userId: { [Op.in]: [p1, p2] }, worldId },
+        where: { userId: { [Op.in]: [p1.id, p2.id] } },
         attributes: ['population']
       });
-      allianceGroups[key].totalPopulation = cities.reduce((s, c) => s + c.population, 0);
-      allianceGroups[key].cityCount = cities.length;
+      const totalPopulation = cities.reduce((s, c) => s + c.population, 0);
+
+      rankings.push({
+        players: [
+          { username: p1.username, level: p1.level },
+          { username: p2.username, level: p2.level }
+        ],
+        combinedLevel: p1.level + p2.level,
+        combinedCredits: p1.credits + p2.credits,
+        totalPopulation,
+        cityCount: cities.length,
+        since: alliance.acceptedAt
+      });
     }
 
-    const rankings = Object.values(allianceGroups)
-      .sort((a, b) => (b.combinedLevel + b.totalPopulation / 1000) - (a.combinedLevel + a.totalPopulation / 1000))
-      .map((a, i) => ({ rank: i + 1, ...a }));
+    rankings.sort((a, b) => (b.combinedLevel + b.totalPopulation / 1000) - (a.combinedLevel + a.totalPopulation / 1000));
+    rankings.forEach((a, i) => a.rank = i + 1);
 
     res.json({ alliances: rankings });
   } catch (error) {

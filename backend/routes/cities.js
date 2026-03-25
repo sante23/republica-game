@@ -4,7 +4,21 @@ const { City, User } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
+const { logActivity } = require('./activity');
+
 const router = express.Router();
+
+// Helper to round resource floats
+function roundResources(city) {
+  if (city.resources) {
+    const rounded = {};
+    for (const [key, val] of Object.entries(city.resources)) {
+      rounded[key] = Math.round(val * 100) / 100;
+    }
+    city.resources = rounded;
+  }
+  return city;
+}
 
 router.get('/my', authenticate, async (req, res) => {
   try {
@@ -16,8 +30,9 @@ router.get('/my', authenticate, async (req, res) => {
         attributes: ['username', 'level']
       }]
     });
-    
-    res.json({ cities });
+
+    const cleaned = cities.map(c => { const j = c.toJSON(); roundResources(j); return j; });
+    res.json({ cities: cleaned });
   } catch (error) {
     console.error('Error fetching cities:', error);
     res.status(500).json({ error: 'Failed to fetch cities' });
@@ -79,9 +94,13 @@ router.post('/create', [
       owner: req.user.username
     });
     
-    res.status(201).json({ 
+    logActivity(city.worldId, 'city_founded',
+      `${req.user.username} founded the city of ${city.name}`,
+      req.user.id, null, { cityId: city.id, x: city.x, y: city.y });
+
+    res.status(201).json({
       message: 'City created successfully',
-      city 
+      city
     });
   } catch (error) {
     console.error('Error creating city:', error);
@@ -132,7 +151,21 @@ router.get('/:id', authenticate, async (req, res) => {
     if (!city) {
       return res.status(404).json({ error: 'City not found' });
     }
-    
+
+    // Hide sensitive data for non-owners
+    if (city.userId !== req.user.id) {
+      const publicCity = {
+        id: city.id,
+        name: city.name,
+        x: city.x,
+        y: city.y,
+        population: city.population,
+        isCapital: city.isCapital,
+        owner: city.owner
+      };
+      return res.json({ city: publicCity });
+    }
+
     res.json({ city });
   } catch (error) {
     console.error('Error fetching city:', error);
@@ -233,9 +266,14 @@ router.post('/:id/update-production', authenticate, async (req, res) => {
     city.updateResources();
     await city.save();
     
+    // Round resource values to avoid float precision issues
+    const roundedResources = {};
+    for (const [key, val] of Object.entries(city.resources)) {
+      roundedResources[key] = Math.round(val * 100) / 100;
+    }
     res.json({
       message: 'Production updated',
-      resources: city.resources,
+      resources: roundedResources,
       population: city.population
     });
   } catch (error) {

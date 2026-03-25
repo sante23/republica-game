@@ -5,6 +5,8 @@ const { authenticate } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
+const { logActivity } = require('./activity');
+
 const router = express.Router();
 
 router.get('/listings', authenticate, async (req, res) => {
@@ -192,6 +194,10 @@ router.post('/buy/:id', authenticate, async (req, res) => {
       );
     }
     
+    logActivity(listing.worldId, 'trade',
+      `${buyer.username} bought ${listing.quantity} ${listing.resource} from ${seller.username}`,
+      buyer.id, null, { resource: listing.resource, quantity: listing.quantity, totalCost });
+
     const io = req.app.get('io');
     io.to(`world-${listing.worldId}`).emit('market-transaction', {
       listingId: listing.id,

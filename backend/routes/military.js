@@ -5,6 +5,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 
 const { body, validationResult } = require('express-validator');
+const { logActivity } = require('./activity');
 
 const router = express.Router();
 
@@ -127,6 +128,7 @@ router.post('/attack', authenticate, [
     const { attackerCityId, defenderCityId, units } = req.body;
 
     if (attackerCityId === defenderCityId) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'Cannot attack your own city' });
     }
 
@@ -322,6 +324,12 @@ router.post('/attack', authenticate, [
 
     await transaction.commit();
 
+    // Log battle to activity feed
+    const winnerName = outcome === 'attacker_win' ? req.user.username : defender.username;
+    logActivity(attackerCity.worldId, 'battle',
+      `${req.user.username} attacked ${defender.username}'s ${defenderCity.name} - ${winnerName} wins!`,
+      req.user.id, null, { outcome, attackerLosses, defenderLosses });
+
     res.json({
       success: true,
       outcome,
@@ -330,9 +338,9 @@ router.post('/attack', authenticate, [
       resourcesPlundered: outcome === 'attacker_win' ? resourcesPlundered : null
     });
   } catch (error) {
-    await transaction.rollback();
+    try { await transaction.rollback(); } catch (e) { /* already rolled back */ }
     console.error('Error during attack:', error);
-    res.status(500).json({ error: 'Failed to execute attack' });
+    res.status(500).json({ error: error.message || 'Failed to execute attack' });
   }
 });
 
@@ -391,6 +399,8 @@ router.post('/alliance/propose', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Alliance proposal already exists' });
     }
 
+    logActivity(req.user.worldId || 1, 'alliance',
+      `${req.user.username} proposed an alliance`, req.user.id);
     res.json({ success: true, message: 'Alliance proposal sent' });
   } catch (error) {
     console.error('Error proposing alliance:', error);

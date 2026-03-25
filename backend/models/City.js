@@ -73,12 +73,12 @@ const City = sequelize.define('City', {
   resources: {
     type: DataTypes.JSONB,
     defaultValue: {
-      food: 500,
-      wood: 200,
-      stone: 100,
-      iron: 50,
-      gold: 100,
-      energy: 100
+      food: 1000,
+      wood: 500,
+      stone: 400,
+      iron: 200,
+      gold: 500,
+      energy: 200
     }
   },
   buildings: {
