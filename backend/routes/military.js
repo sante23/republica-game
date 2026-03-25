@@ -139,12 +139,14 @@ router.post('/attack', authenticate, [
       return res.status(403).json({ error: 'Not your city' });
     }
 
-    // Get defender city
+    // Get defender city (separate queries to avoid lock + join issue)
     const defenderCity = await City.findByPk(defenderCityId, {
       transaction,
-      lock: true,
-      include: [{ model: User, as: 'owner' }]
+      lock: true
     });
+    if (defenderCity) {
+      defenderCity.owner = await User.findByPk(defenderCity.userId, { transaction });
+    }
     if (!defenderCity) {
       await transaction.rollback();
       return res.status(404).json({ error: 'Defender city not found' });
