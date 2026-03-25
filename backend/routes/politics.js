@@ -95,7 +95,7 @@ router.post('/elections/create', [
 
 router.post('/elections/:id/register', [
   authenticate,
-  body('program').isLength({ min: 50, max: 1000 })
+  body('program').isLength({ min: 10, max: 1000 })
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
