@@ -54,9 +54,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.production
-      args:
-        REACT_APP_API_URL: ${CLIENT_URL}/api
+      dockerfile: Dockerfile.light
     restart: unless-stopped
     ports:
       - "80:80"
