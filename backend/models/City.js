@@ -127,13 +127,15 @@ const City = sequelize.define('City', {
 });
 
 City.prototype.calculateProduction = function() {
-  const production = { ...this.production };
-  
-  production.food = this.buildings.farms * 5 * (1 + this.developmentLevel * 0.1);
-  production.wood = this.buildings.sawmills * 3 * (1 + this.developmentLevel * 0.1);
-  production.stone = this.buildings.mines * 2 * (1 + this.developmentLevel * 0.1);
-  production.iron = this.buildings.mines * 1 * (1 + this.developmentLevel * 0.1);
-  
+  const devBonus = 1 + this.developmentLevel * 0.1;
+  const production = {
+    food: Math.round(this.buildings.farms * 5 * devBonus),
+    wood: Math.round(this.buildings.sawmills * 3 * devBonus),
+    stone: Math.round(this.buildings.mines * 2 * devBonus),
+    iron: Math.round(this.buildings.mines * 1 * devBonus),
+    gold: Math.round((this.buildings.markets || 0) * 3 * devBonus + (this.buildings.mines || 0) * 0.5 * devBonus),
+    energy: Math.round((this.buildings.houses || 0) * 0.5 * devBonus)
+  };
   return production;
 };
 

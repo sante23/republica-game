@@ -116,14 +116,16 @@ class GameScheduler {
   async updateCityProduction(city) {
     try {
       const production = city.calculateProduction();
+      city.production = production; // persist calculated production
+      city.changed('production', true);
       const consumption = city.consumption;
 
       for (const resource in production) {
-        city.resources[resource] = (city.resources[resource] || 0) + production[resource];
+        city.resources[resource] = Math.round(((city.resources[resource] || 0) + production[resource]) * 100) / 100;
       }
 
       for (const resource in consumption) {
-        city.resources[resource] = Math.max(0, (city.resources[resource] || 0) - consumption[resource]);
+        city.resources[resource] = Math.max(0, Math.round(((city.resources[resource] || 0) - consumption[resource]) * 100) / 100);
       }
 
       // Population growth: max capacity based on houses, slow linear growth

@@ -91,8 +91,8 @@ app.use('/api/market/sell', tradeLimiter);
 app.use('/api/market/buy', tradeLimiter);
 app.use('/api/espionage/send', spyLimiter);
 app.use('/api/chat/send', chatLimiter);
-app.use('/api/politics/elections', voteLimiter);
-app.use('/api/governance/policies', voteLimiter);
+// Vote limiters only on write endpoints, not reads
+app.use('/api/governance/policies/:id/vote', voteLimiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/cities', cityRoutes);

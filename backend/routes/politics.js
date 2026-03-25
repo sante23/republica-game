@@ -118,9 +118,9 @@ router.post('/elections/:id/register', [
     }
     
     const levelRequirements = {
-      MAYOR: 10,
-      GOVERNOR: 25,
-      PRESIDENT: 40
+      MAYOR: 1,
+      GOVERNOR: 3,
+      PRESIDENT: 5
     };
     
     if (req.user.level < levelRequirements[election.position]) {
@@ -130,9 +130,9 @@ router.post('/elections/:id/register', [
     }
     
     const registrationCost = {
-      MAYOR: 1000,
-      GOVERNOR: 5000,
-      PRESIDENT: 10000
+      MAYOR: 100,
+      GOVERNOR: 500,
+      PRESIDENT: 1000
     };
     
     if (req.user.credits < registrationCost[election.position]) {
