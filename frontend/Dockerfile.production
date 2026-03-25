@@ -15,6 +15,7 @@ COPY . .
 # Build arguments
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
+ENV DISABLE_ESLINT_PLUGIN=true
 
 # Build application
 RUN npm run build
