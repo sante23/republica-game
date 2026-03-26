@@ -51,6 +51,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate, onComplete,
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetDate, startDate]);
 
   return (

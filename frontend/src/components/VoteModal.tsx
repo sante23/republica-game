@@ -35,6 +35,7 @@ const VoteModal: React.FC<VoteModalProps> = ({
     if (isOpen && electionId) {
       fetchCandidates();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, electionId]);
 
   const fetchCandidates = async () => {

@@ -39,6 +39,7 @@ const Leaderboard: React.FC = () => {
   useEffect(() => {
     fetchLeaderboard();
     fetchStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metric]);
 
   const fetchLeaderboard = async () => {

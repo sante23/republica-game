@@ -123,10 +123,6 @@ router.post('/buy/:id', authenticate, async (req, res) => {
         id: req.params.id,
         status: 'ACTIVE'
       },
-      include: [{
-        model: City,
-        as: 'city'
-      }],
       lock: true,
       transaction
     });

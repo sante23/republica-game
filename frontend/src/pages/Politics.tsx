@@ -22,7 +22,6 @@ const Politics: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const [elections, setElections] = useState<Election[]>([]);
-  const [selectedElection, setSelectedElection] = useState<Election | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);

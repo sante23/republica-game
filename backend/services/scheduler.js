@@ -77,6 +77,11 @@ class GameScheduler {
 
   async updateAllCityProduction() {
     try {
+      // Fetch active world events to apply their effects
+      const activeEvents = await WorldEvent.findAll({
+        where: { active: true, endsAt: { [require('sequelize').Op.gt]: new Date() } }
+      });
+
       let offset = 0;
       let totalUpdated = 0;
 
@@ -95,7 +100,7 @@ class GameScheduler {
         if (cities.length === 0) break;
 
         for (const city of cities) {
-          await this.updateCityProduction(city);
+          await this.updateCityProduction(city, activeEvents);
         }
 
         totalUpdated += cities.length;
@@ -113,9 +118,30 @@ class GameScheduler {
     }
   }
 
-  async updateCityProduction(city) {
+  async updateCityProduction(city, activeEvents = []) {
     try {
       const production = city.calculateProduction();
+
+      // Apply world event effects to production (effects use multipliers: 0.5 = halved, 2.0 = doubled)
+      for (const event of activeEvents) {
+        if (event.affectedCityId && event.affectedCityId !== city.id) continue;
+        if (event.worldId !== city.worldId) continue;
+        const effects = event.effects || {};
+        if (effects.foodProduction) production.food = Math.max(0, Math.round(production.food * effects.foodProduction));
+        if (effects.goldProduction) production.gold = Math.max(0, Math.round(production.gold * effects.goldProduction));
+        if (effects.ironProduction) production.iron = Math.max(0, Math.round(production.iron * effects.ironProduction));
+        if (effects.woodProduction) production.wood = Math.max(0, Math.round(production.wood * effects.woodProduction));
+        if (effects.stoneProduction) production.stone = Math.max(0, Math.round(production.stone * effects.stoneProduction));
+        if (effects.allProduction) {
+          for (const r in production) {
+            production[r] = Math.max(0, Math.round(production[r] * effects.allProduction));
+          }
+        }
+        if (effects.happinessModifier) {
+          city.happiness = Math.max(0, Math.min(100, city.happiness + effects.happinessModifier));
+        }
+      }
+
       city.production = production; // persist calculated production
       city.changed('production', true);
       const consumption = city.consumption;

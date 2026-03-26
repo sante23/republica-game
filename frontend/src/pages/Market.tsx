@@ -38,6 +38,7 @@ const Market: React.FC = () => {
 
   useEffect(() => {
     fetchListings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   const fetchListings = async () => {

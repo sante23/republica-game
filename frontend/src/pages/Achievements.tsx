@@ -14,12 +14,6 @@ interface Achievement {
   unlockedAt: string | null;
 }
 
-const ICON_MAP: Record<string, string> = {
-  building: 'building', hammer: 'hammer', coins: 'coins', sword: 'sword',
-  vote: 'vote', beaker: 'beaker', handshake: 'handshake', eye: 'eye',
-  users: 'users', star: 'star', crown: 'crown', map: 'map', award: 'award'
-};
-
 const Achievements: React.FC = () => {
   const navigate = useNavigate();
   const [achievements, setAchievements] = useState<Achievement[]>([]);

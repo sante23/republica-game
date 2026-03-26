@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../config/api';
 import { Crown, FileText, AlertTriangle } from 'lucide-react';
 import './Government.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
 const Government: React.FC = () => {
-  const { user } = useAuth();
+  useAuth(); // ensure authenticated
   const [policies, setPolicies] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
   const [impeachments, setImpeachments] = useState<any[]>([]);
@@ -21,10 +19,7 @@ const Government: React.FC = () => {
 
   const fetchPolicies = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/governance/policies`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/governance/policies');
       setPolicies(response.data);
     } catch (error) {
       console.error('Error fetching policies:', error);
@@ -33,10 +28,7 @@ const Government: React.FC = () => {
 
   const fetchPositions = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/governance/positions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/governance/positions');
       setPositions(response.data);
     } catch (error) {
       console.error('Error fetching positions:', error);
@@ -45,10 +37,7 @@ const Government: React.FC = () => {
 
   const fetchImpeachments = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/governance/impeachment`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/governance/impeachment');
       setImpeachments(response.data);
     } catch (error) {
       console.error('Error fetching impeachments:', error);
@@ -63,14 +52,11 @@ const Government: React.FC = () => {
     if (!name || !description || !policyType) return;
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/governance/policies`, {
+      await api.post('/governance/policies', {
         name,
         description,
         policyType,
         effects: {}
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       alert('Policy proposed!');
       fetchPolicies();
@@ -81,11 +67,8 @@ const Government: React.FC = () => {
 
   const voteOnPolicy = async (policyId: string, vote: boolean) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/governance/policies/${policyId}/vote`, {
+      await api.post(`/governance/policies/${policyId}/vote`, {
         vote
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       alert('Vote recorded!');
       fetchPolicies();

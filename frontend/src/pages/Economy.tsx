@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
-import axios from 'axios';
+import api from '../config/api';
 import { TrendingUp, ArrowRightLeft, Settings } from 'lucide-react';
 import './Economy.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
 const Economy: React.FC = () => {
-  const { user } = useAuth();
   const { cities } = useGame();
   const [tradeRoutes, setTradeRoutes] = useState<any[]>([]);
   const [autoOrders, setAutoOrders] = useState<any[]>([]);
@@ -20,6 +16,7 @@ const Economy: React.FC = () => {
     if (cities.length > 0 && !selectedCity) {
       setSelectedCity(cities[0]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cities]);
 
   useEffect(() => {
@@ -28,15 +25,13 @@ const Economy: React.FC = () => {
     }
     fetchAutoOrders();
     fetchTaxSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCity]);
 
   const fetchTradeRoutes = async () => {
     if (!selectedCity) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/economy/trade-routes/city/${selectedCity.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(`/economy/trade-routes/city/${selectedCity.id}`);
       setTradeRoutes(response.data);
     } catch (error) {
       console.error('Error fetching trade routes:', error);
@@ -45,10 +40,7 @@ const Economy: React.FC = () => {
 
   const fetchAutoOrders = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/economy/auto-orders`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/economy/auto-orders');
       setAutoOrders(response.data);
     } catch (error) {
       console.error('Error fetching auto orders:', error);
@@ -57,10 +49,7 @@ const Economy: React.FC = () => {
 
   const fetchTaxSettings = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/economy/tax-settings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/economy/tax-settings');
       setTaxSettings(response.data);
     } catch (error) {
       console.error('Error fetching tax settings:', error);
@@ -75,14 +64,11 @@ const Economy: React.FC = () => {
     if (!toCityId || !resourceType || !quantity) return;
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/economy/trade-routes`, {
+      await api.post('/economy/trade-routes', {
         fromCityId: selectedCity.id,
         toCityId,
         resourceType,
         quantityPerHour: parseFloat(quantity)
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       alert('Trade route created!');
       fetchTradeRoutes();
@@ -100,14 +86,11 @@ const Economy: React.FC = () => {
     if (!resourceType || !orderType || !price || !quantity) return;
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/economy/auto-orders`, {
+      await api.post('/economy/auto-orders', {
         resourceType,
         orderType,
         price: parseFloat(price),
         quantity: parseInt(quantity)
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       alert('Auto order created!');
       fetchAutoOrders();

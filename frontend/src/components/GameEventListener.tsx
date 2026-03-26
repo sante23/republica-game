@@ -52,6 +52,7 @@ const GameEventListener: React.FC = () => {
         socket.off(event, handler);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, user]);
 
   return null;

@@ -2,6 +2,7 @@ const express = require('express');
 const { TradeRoute, AutoOrder, TaxSettings, City, User, GovernmentPosition } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const sequelize = require('../config/database');
+const { Op } = require('sequelize');
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ router.get('/trade-routes/city/:cityId', authenticate, async (req, res) => {
 
     const routes = await TradeRoute.findAll({
       where: {
-        [sequelize.Op.or]: [
+        [Op.or]: [
           { fromCityId: cityId },
           { toCityId: cityId }
         ]
@@ -271,7 +272,7 @@ router.put('/tax-settings', authenticate, async (req, res) => {
         position: {
           [sequelize.Op.in]: ['president', 'minister_economy']
         },
-        [sequelize.Op.or]: [
+        [Op.or]: [
           { endDate: null },
           { endDate: { [sequelize.Op.gt]: new Date() } }
         ]

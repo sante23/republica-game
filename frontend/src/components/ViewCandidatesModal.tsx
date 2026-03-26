@@ -31,6 +31,7 @@ const ViewCandidatesModal: React.FC<ViewCandidatesModalProps> = ({
     if (isOpen && electionId) {
       fetchCandidates();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, electionId]);
 
   const fetchCandidates = async () => {

@@ -14,6 +14,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchCities();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalPopulation = cities.reduce((sum, city) => sum + city.population, 0);

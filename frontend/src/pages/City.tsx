@@ -47,6 +47,7 @@ const City: React.FC = () => {
     fetchResearch();
     const interval = setInterval(updateProduction, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchCity = async () => {
@@ -121,14 +122,6 @@ const City: React.FC = () => {
     } finally {
       setResearchingTech(null);
     }
-  };
-
-  const getTimeLeft = (completesAt: string) => {
-    const diff = new Date(completesAt).getTime() - Date.now();
-    if (diff <= 0) return 'Done!';
-    const mins = Math.floor(diff / 60000);
-    const hours = Math.floor(mins / 60);
-    return hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`;
   };
 
   if (loading) return <div className="loading">Loading city...</div>;

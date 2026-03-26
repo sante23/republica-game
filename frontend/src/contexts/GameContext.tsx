@@ -82,6 +82,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         newSocket.disconnect();
       };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchCities = async () => {

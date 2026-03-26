@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
-import axios from 'axios';
-import { Sword, Shield, Target, Users, AlertCircle } from 'lucide-react';
+import api from '../config/api';
+import { Sword, Target, Users } from 'lucide-react';
 import './Military.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const UNIT_TYPES = {
   infantry: {
@@ -39,7 +36,6 @@ const UNIT_TYPES = {
 };
 
 const Military: React.FC = () => {
-  const { user } = useAuth();
   const { cities } = useGame();
   const [selectedCity, setSelectedCity] = useState<any>(null);
   const [units, setUnits] = useState<any[]>([]);
@@ -52,6 +48,7 @@ const Military: React.FC = () => {
     if (cities.length > 0 && !selectedCity) {
       setSelectedCity(cities[0]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cities]);
 
   useEffect(() => {
@@ -60,15 +57,13 @@ const Military: React.FC = () => {
     }
     fetchBattles();
     fetchAlliances();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCity]);
 
   const fetchUnits = async () => {
     if (!selectedCity) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/military/city/${selectedCity.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(`/military/city/${selectedCity.id}`);
       setUnits(response.data);
     } catch (error) {
       console.error('Error fetching units:', error);
@@ -77,10 +72,7 @@ const Military: React.FC = () => {
 
   const fetchBattles = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/military/battles`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/military/battles');
       setBattles(response.data);
     } catch (error) {
       console.error('Error fetching battles:', error);
@@ -89,10 +81,7 @@ const Military: React.FC = () => {
 
   const fetchAlliances = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/military/alliances`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/military/alliances');
       setAlliances(response.data);
     } catch (error) {
       console.error('Error fetching alliances:', error);
@@ -103,13 +92,10 @@ const Military: React.FC = () => {
     if (!selectedCity) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/military/train`, {
+      await api.post('/military/train', {
         cityId: selectedCity.id,
         unitType,
         quantity
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       alert(`Successfully trained ${quantity} ${UNIT_TYPES[unitType as keyof typeof UNIT_TYPES].name}!`);
       fetchUnits();
