@@ -1,8 +1,9 @@
 const express = require('express');
-const { Policy, PolicyVote, GovernmentPosition, ImpeachmentVote, User, Election } = require('../models');
+const { Policy, PolicyVote, GovernmentPosition, ImpeachmentVote, User, Election, City, ActivityLog } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
+const { logActivity } = require('./activity');
 
 const router = express.Router();
 
@@ -368,6 +369,190 @@ router.post('/impeachment/:id/vote', authenticate, async (req, res) => {
     await transaction.rollback();
     console.error('Error voting on impeachment:', error);
     res.status(500).json({ error: 'Failed to vote on impeachment' });
+  }
+});
+
+// ============================================
+// MAYOR POWERS
+// ============================================
+
+// Use mayor power: production boost (+10% for 4h, 24h cooldown)
+router.post('/mayor/boost', authenticate, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { cityId } = req.body;
+    const worldId = req.user.worldId || 1;
+
+    // Check user is mayor of this city
+    const mayorPosition = await GovernmentPosition.findOne({
+      where: {
+        worldId,
+        position: 'mayor',
+        userId: req.user.id,
+        cityId,
+        [Op.or]: [{ endDate: null }, { endDate: { [Op.gt]: new Date() } }]
+      },
+      transaction
+    });
+
+    if (!mayorPosition) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'You are not the mayor of this city' });
+    }
+
+    // Check cooldown (stored in data field)
+    const lastUsed = mayorPosition.dataValues.lastBoostAt;
+    if (lastUsed && (Date.now() - new Date(lastUsed).getTime()) < 24 * 60 * 60 * 1000) {
+      const hoursLeft = Math.ceil((24 * 60 * 60 * 1000 - (Date.now() - new Date(lastUsed).getTime())) / (1000 * 60 * 60));
+      await transaction.rollback();
+      return res.status(400).json({ error: `Production boost on cooldown. ${hoursLeft}h remaining` });
+    }
+
+    // Apply boost: increase city development temporarily via WorldEvent-like mechanism
+    const city = await City.findByPk(cityId, { transaction });
+    if (!city) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'City not found' });
+    }
+
+    // Create a world event for the boost
+    const { WorldEvent } = require('../models');
+    await WorldEvent.create({
+      worldId,
+      type: 'mayor_boost',
+      name: `Mayor's Production Decree`,
+      description: `Mayor ${req.user.username} has decreed a production boost for ${city.name}!`,
+      effects: { allProduction: 1.1 },
+      affectedCityId: cityId,
+      active: true,
+      startsAt: new Date(),
+      endsAt: new Date(Date.now() + 4 * 60 * 60 * 1000)
+    }, { transaction });
+
+    await transaction.commit();
+
+    logActivity(worldId, 'policy',
+      `Mayor ${req.user.username} activated a production boost for ${city.name}`,
+      req.user.id, null, { cityId, power: 'boost' });
+
+    res.json({ success: true, message: `Production boost activated for ${city.name}! +10% for 4 hours.` });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Mayor boost error:', error);
+    res.status(500).json({ error: 'Failed to activate boost' });
+  }
+});
+
+// Use mayor power: set city tax rate
+router.post('/mayor/tax', authenticate, async (req, res) => {
+  try {
+    const { cityId, taxRate } = req.body;
+    const worldId = req.user.worldId || 1;
+
+    const rate = parseInt(taxRate);
+    if (isNaN(rate) || rate < 0 || rate > 50) {
+      return res.status(400).json({ error: 'Tax rate must be 0-50' });
+    }
+
+    const mayorPosition = await GovernmentPosition.findOne({
+      where: {
+        worldId,
+        position: 'mayor',
+        userId: req.user.id,
+        cityId,
+        [Op.or]: [{ endDate: null }, { endDate: { [Op.gt]: new Date() } }]
+      }
+    });
+
+    if (!mayorPosition) {
+      return res.status(403).json({ error: 'You are not the mayor of this city' });
+    }
+
+    const city = await City.findByPk(cityId);
+    if (!city) return res.status(404).json({ error: 'City not found' });
+
+    await city.update({ taxRate: rate });
+
+    logActivity(worldId, 'policy',
+      `Mayor ${req.user.username} set tax rate to ${rate}% in ${city.name}`,
+      req.user.id, null, { cityId, taxRate: rate });
+
+    res.json({ success: true, message: `Tax rate set to ${rate}%` });
+  } catch (error) {
+    console.error('Mayor tax error:', error);
+    res.status(500).json({ error: 'Failed to set tax rate' });
+  }
+});
+
+// Use mayor power: market ban (ban player from trading in city for 12h)
+router.post('/mayor/ban', authenticate, async (req, res) => {
+  try {
+    const { cityId, targetUsername } = req.body;
+    const worldId = req.user.worldId || 1;
+
+    const mayorPosition = await GovernmentPosition.findOne({
+      where: {
+        worldId,
+        position: 'mayor',
+        userId: req.user.id,
+        cityId,
+        [Op.or]: [{ endDate: null }, { endDate: { [Op.gt]: new Date() } }]
+      }
+    });
+
+    if (!mayorPosition) {
+      return res.status(403).json({ error: 'You are not the mayor of this city' });
+    }
+
+    const target = await User.findOne({ where: { username: targetUsername, worldId } });
+    if (!target) return res.status(404).json({ error: 'Player not found' });
+
+    logActivity(worldId, 'policy',
+      `Mayor ${req.user.username} banned ${targetUsername} from local market for 12h`,
+      req.user.id, `Market ban in effect until ${new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString()}`,
+      { cityId, targetUserId: target.id, banUntil: new Date(Date.now() + 12 * 60 * 60 * 1000) });
+
+    res.json({ success: true, message: `${targetUsername} banned from local market for 12 hours` });
+  } catch (error) {
+    console.error('Mayor ban error:', error);
+    res.status(500).json({ error: 'Failed to issue ban' });
+  }
+});
+
+// Get mayor powers status for a city
+router.get('/mayor/:cityId', authenticate, async (req, res) => {
+  try {
+    const worldId = req.user.worldId || 1;
+    const { cityId } = req.params;
+
+    const mayorPosition = await GovernmentPosition.findOne({
+      where: {
+        worldId,
+        position: 'mayor',
+        cityId,
+        [Op.or]: [{ endDate: null }, { endDate: { [Op.gt]: new Date() } }]
+      },
+      include: [{ model: User, as: 'holder', attributes: ['username'] }]
+    });
+
+    if (!mayorPosition) {
+      return res.json({ hasMayor: false });
+    }
+
+    const isMayor = mayorPosition.userId === req.user.id;
+    const city = await City.findByPk(cityId, { attributes: ['taxRate', 'name'] });
+
+    res.json({
+      hasMayor: true,
+      mayorName: mayorPosition.holder?.username,
+      isMayor,
+      cityName: city?.name,
+      taxRate: city?.taxRate,
+      powers: isMayor ? ['boost', 'tax', 'ban'] : []
+    });
+  } catch (error) {
+    console.error('Error fetching mayor status:', error);
+    res.status(500).json({ error: 'Failed to fetch mayor status' });
   }
 });
 

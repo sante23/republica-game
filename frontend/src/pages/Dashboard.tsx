@@ -5,6 +5,8 @@ import { useGame } from '../contexts/GameContext';
 import { Building, Coins, Users, TrendingUp, Globe, Award, Shield } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CityFoundModal from '../components/CityFoundModal';
+import DailyQuests from '../components/DailyQuests';
+import ActivityFeed from '../components/ActivityFeed';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
@@ -108,6 +110,12 @@ const Dashboard: React.FC = () => {
             <p className="stat-desc">Political standing</p>
           </div>
         </div>
+      </div>
+
+      {/* Daily Quests + Activity Feed side by side */}
+      <div className="dashboard-duo">
+        <DailyQuests />
+        <ActivityFeed />
       </div>
 
       {/* Production Chart */}

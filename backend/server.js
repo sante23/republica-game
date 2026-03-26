@@ -54,6 +54,9 @@ const contractRoutes = require('./routes/contracts');
 const bankingRoutes = require('./routes/banking');
 const achievementRoutes = require('./routes/achievements');
 const activityRoutes = require('./routes/activity');
+const questRoutes = require('./routes/quests');
+const npcMerchantRoutes = require('./routes/npcMerchant');
+const DailyQuest = require('./models/DailyQuest');
 
 const { attackLimiter, tradeLimiter, voteLimiter, spyLimiter, chatLimiter, authLimiter } = require('./middleware/rateLimiters');
 
@@ -112,6 +115,8 @@ app.use('/api/contracts', contractRoutes);
 app.use('/api/banking', bankingRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/quests', questRoutes);
+app.use('/api/merchant', npcMerchantRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });
@@ -231,6 +236,7 @@ async function syncDatabase() {
     await Loan.sync({ alter: true });
     await Achievement.sync({ alter: true });
     await ActivityLog.sync({ alter: true });
+    await DailyQuest.sync({ alter: true });
 
     logger.info('Database connected and synchronized');
 

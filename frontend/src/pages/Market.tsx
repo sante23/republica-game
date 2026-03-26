@@ -7,6 +7,7 @@ import { ArrowLeft, TrendingUp, ShoppingCart, Package, BarChart2 } from 'lucide-
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { playSound } from '../utils/sounds';
 import CreateListingModal from '../components/CreateListingModal';
+import NpcMerchant from '../components/NpcMerchant';
 import './Market.css';
 
 interface Listing {
@@ -98,6 +99,8 @@ const Market: React.FC = () => {
           <Package /> Create Listing
         </button>
       </header>
+
+      <NpcMerchant />
 
       <div className="market-filters">
         <button 

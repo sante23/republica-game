@@ -9,6 +9,74 @@
   margin-bottom: 20px;
 }
 
+/* Mayor Powers */
+.mayor-powers-panel {
+  background: linear-gradient(135deg, #667eea08, #764ba208);
+  border: 1px solid #667eea30;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.mayor-powers-panel h3 {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mayor-powers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.mayor-power-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.mayor-power-btn:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.mayor-power-btn strong {
+  display: block;
+  font-size: 13px;
+  color: #1a202c;
+}
+
+.mayor-power-btn span {
+  display: block;
+  font-size: 11px;
+  color: #718096;
+}
+
+.mayor-power-btn.boost svg { color: #d69e2e; }
+.mayor-power-btn.tax svg { color: #667eea; }
+.mayor-power-btn.ban svg { color: #e53e3e; }
+
+.mayor-info-banner {
+  padding: 10px 16px;
+  background: #ebf8ff;
+  border: 1px solid #bee3f8;
+  border-radius: 8px;
+  color: #2b6cb0;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
 .policies-list {
   display: grid;
   gap: 20px;

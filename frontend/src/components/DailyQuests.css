@@ -1,0 +1,137 @@
+.daily-quests {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+}
+
+.dq-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.dq-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dq-timer {
+  font-size: 12px;
+  color: #a0aec0;
+  font-weight: 600;
+}
+
+.dq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dq-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
+  transition: all 0.15s;
+}
+
+.dq-item.dq-done {
+  border-left-color: #38a169;
+  background: #f0fff4;
+}
+
+.dq-item.dq-claimed {
+  opacity: 0.6;
+  border-left-color: #a0aec0;
+  background: #f7fafc;
+}
+
+.dq-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dq-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.dq-desc {
+  font-size: 12px;
+  color: #718096;
+  margin-top: 2px;
+}
+
+.dq-progress-bar {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.dq-progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.dq-done .dq-progress-fill {
+  background: #38a169;
+}
+
+.dq-progress-text {
+  font-size: 11px;
+  color: #a0aec0;
+  margin-top: 2px;
+}
+
+.dq-reward {
+  flex-shrink: 0;
+}
+
+.dq-reward-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 11px;
+  color: #718096;
+  font-weight: 600;
+}
+
+.dq-claim-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #38a169;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  animation: dq-pulse 1.5s infinite;
+}
+
+@keyframes dq-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(56, 161, 105, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(56, 161, 105, 0); }
+}
+
+.dq-check {
+  color: #38a169;
+}

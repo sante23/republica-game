@@ -1,21 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useGame } from '../contexts/GameContext';
 import api from '../config/api';
-import { Crown, FileText, AlertTriangle } from 'lucide-react';
+import { Crown, FileText, AlertTriangle, Zap } from 'lucide-react';
 import './Government.css';
 
 const Government: React.FC = () => {
   useAuth(); // ensure authenticated
+  const { cities } = useGame();
   const [policies, setPolicies] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
   const [impeachments, setImpeachments] = useState<any[]>([]);
+  const [mayorStatus, setMayorStatus] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('policies');
 
   useEffect(() => {
     fetchPolicies();
     fetchPositions();
     fetchImpeachments();
-  }, []);
+    if (cities.length > 0) {
+      fetchMayorStatus(cities[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cities]);
 
   const fetchPolicies = async () => {
     try {
@@ -41,6 +48,38 @@ const Government: React.FC = () => {
       setImpeachments(response.data);
     } catch (error) {
       console.error('Error fetching impeachments:', error);
+    }
+  };
+
+  const fetchMayorStatus = async (cityId: string) => {
+    try {
+      const response = await api.get(`/governance/mayor/${cityId}`);
+      setMayorStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching mayor status:', error);
+    }
+  };
+
+  const activateMayorPower = async (power: string) => {
+    if (!cities[0]) return;
+    try {
+      if (power === 'boost') {
+        await api.post('/governance/mayor/boost', { cityId: cities[0].id });
+        alert('Production boost activated! +10% for 4 hours.');
+      } else if (power === 'tax') {
+        const rate = prompt('Set new tax rate (0-50):');
+        if (rate === null) return;
+        await api.post('/governance/mayor/tax', { cityId: cities[0].id, taxRate: parseInt(rate) });
+        alert(`Tax rate set to ${rate}%`);
+      } else if (power === 'ban') {
+        const username = prompt('Enter player username to ban from local market (12h):');
+        if (!username) return;
+        await api.post('/governance/mayor/ban', { cityId: cities[0].id, targetUsername: username });
+        alert(`${username} banned from local market for 12 hours.`);
+      }
+      fetchMayorStatus(cities[0].id);
+    } catch (error: any) {
+      alert(error.response?.data?.error || `Failed to use ${power} power`);
     }
   };
 
@@ -80,6 +119,41 @@ const Government: React.FC = () => {
   return (
     <div className="government-page">
       <h1>🏛️ Government</h1>
+
+      {/* Mayor Powers Panel */}
+      {mayorStatus?.isMayor && (
+        <div className="mayor-powers-panel">
+          <h3><Crown size={16} /> Mayor Powers - {mayorStatus.cityName}</h3>
+          <div className="mayor-powers-grid">
+            <button className="mayor-power-btn boost" onClick={() => activateMayorPower('boost')}>
+              <Zap size={18} />
+              <div>
+                <strong>Production Boost</strong>
+                <span>+10% production for 4h (24h cooldown)</span>
+              </div>
+            </button>
+            <button className="mayor-power-btn tax" onClick={() => activateMayorPower('tax')}>
+              <Crown size={18} />
+              <div>
+                <strong>Set Tax Rate</strong>
+                <span>Current: {mayorStatus.taxRate}%</span>
+              </div>
+            </button>
+            <button className="mayor-power-btn ban" onClick={() => activateMayorPower('ban')}>
+              <AlertTriangle size={18} />
+              <div>
+                <strong>Market Ban</strong>
+                <span>Ban a player from local market for 12h</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+      {mayorStatus?.hasMayor && !mayorStatus.isMayor && (
+        <div className="mayor-info-banner">
+          Mayor of {mayorStatus.cityName}: <strong>{mayorStatus.mayorName}</strong>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="tabs">

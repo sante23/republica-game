@@ -198,6 +198,19 @@
   font-size: 14px;
 }
 
+.dashboard-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-duo {
+    grid-template-columns: 1fr;
+  }
+}
+
 .loading {
   text-align: center;
   padding: 40px;

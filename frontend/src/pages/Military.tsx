@@ -200,24 +200,57 @@ const Military: React.FC = () => {
             <p>No battles yet</p>
           ) : (
             <div className="battles-list">
-              {battles.map(battle => (
-                <div key={battle.id} className="battle-card">
-                  <div className={`outcome ${battle.outcome}`}>
-                    {battle.outcome === 'attacker_win' ? '🎉 Victory!' : '😔 Defeat'}
+              {battles.map(battle => {
+                const isAttacker = battle.attacker?.username !== battle.defender?.username;
+                const totalAttLoss = battle.attackerLosses ? Object.values(battle.attackerLosses as Record<string, number>).reduce((s, v) => s + v, 0) : 0;
+                const totalDefLoss = battle.defenderLosses ? Object.values(battle.defenderLosses as Record<string, number>).reduce((s, v) => s + v, 0) : 0;
+
+                return (
+                  <div key={battle.id} className={`battle-card ${battle.outcome}`}>
+                    <div className="battle-header">
+                      <span className={`battle-outcome ${battle.outcome}`}>
+                        {battle.outcome === 'attacker_win' ? 'VICTORY' : 'DEFEAT'}
+                      </span>
+                      <small>{new Date(battle.battle_date || battle.battleDate).toLocaleString()}</small>
+                    </div>
+                    <div className="battle-versus">
+                      <div className="battle-side attacker-side">
+                        <strong>{battle.attacker?.username}</strong>
+                        <span className="battle-city-name">{battle.attackerCity?.name}</span>
+                      </div>
+                      <span className="battle-vs">VS</span>
+                      <div className="battle-side defender-side">
+                        <strong>{battle.defender?.username}</strong>
+                        <span className="battle-city-name">{battle.defenderCity?.name}</span>
+                      </div>
+                    </div>
+                    <div className="battle-stats-grid">
+                      <div className="battle-stat-box">
+                        <div className="battle-stat-label">Attacker Losses</div>
+                        <div className="battle-stat-value loss">{totalAttLoss} units</div>
+                        {battle.attackerLosses && Object.entries(battle.attackerLosses as Record<string, number>).map(([type, count]) => (
+                          count > 0 && <div key={type} className="battle-unit-loss">{type}: -{count}</div>
+                        ))}
+                      </div>
+                      <div className="battle-stat-box">
+                        <div className="battle-stat-label">Defender Losses</div>
+                        <div className="battle-stat-value loss">{totalDefLoss} units</div>
+                        {battle.defenderLosses && Object.entries(battle.defenderLosses as Record<string, number>).map(([type, count]) => (
+                          count > 0 && <div key={type} className="battle-unit-loss">{type}: -{count}</div>
+                        ))}
+                      </div>
+                      {battle.resourcesPlundered && (
+                        <div className="battle-stat-box plunder">
+                          <div className="battle-stat-label">Plundered</div>
+                          {Object.entries(battle.resourcesPlundered as Record<string, number>).map(([res, amt]) => (
+                            amt > 0 && <div key={res} className="battle-plunder-item">+{amt} {res}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <strong>{battle.attacker?.username}</strong> attacked <strong>{battle.defender?.username}</strong>
-                  </div>
-                  <div className="battle-details">
-                    <div>📍 {battle.attackerCity?.name} → {battle.defenderCity?.name}</div>
-                    <div>⚔️ Losses: {JSON.stringify(battle.attackerLosses)}</div>
-                    {battle.resourcesPlundered && (
-                      <div>💰 Plundered: {JSON.stringify(battle.resourcesPlundered)}</div>
-                    )}
-                  </div>
-                  <small>{new Date(battle.battleDate).toLocaleString()}</small>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

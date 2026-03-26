@@ -332,13 +332,52 @@ router.post('/attack', authenticate, [
       `${req.user.username} attacked ${defender.username}'s ${defenderCity.name} - ${winnerName} wins!`,
       req.user.id, null, { outcome, attackerLosses, defenderLosses });
 
-    res.json({
+    // Send detailed battle report
+    const totalAttackerSent = Object.values(units).reduce((s, v) => s + v, 0);
+    const totalAttackerLost = Object.values(attackerLosses).reduce((s, v) => s + v, 0);
+    const totalDefenderLost = Object.values(defenderLosses).reduce((s, v) => s + v, 0);
+
+    const report = {
       success: true,
       outcome,
-      attackerLosses,
-      defenderLosses,
-      resourcesPlundered: outcome === 'attacker_win' ? resourcesPlundered : null
-    });
+      summary: outcome === 'attacker_win'
+        ? `Victory! ${attackerCity.name} conquered ${defenderCity.name}'s defenses.`
+        : `Defeat! ${defenderCity.name} repelled the attack from ${attackerCity.name}.`,
+      attacker: {
+        player: req.user.username,
+        city: attackerCity.name,
+        unitsSent: units,
+        totalSent: totalAttackerSent,
+        losses: attackerLosses,
+        totalLost: totalAttackerLost,
+        power: Math.round(attackerPower)
+      },
+      defender: {
+        player: defender.username,
+        city: defenderCity.name,
+        unitsPresent: Object.fromEntries(defenderUnits.map(u => [u.unitType, u.quantity])),
+        losses: defenderLosses,
+        totalLost: totalDefenderLost,
+        power: Math.round(defenderPower),
+        defenseBonus: `${Math.round(cityDefenseBonus * 100)}%`,
+        wallLevel,
+        towerLevel
+      },
+      plunder: outcome === 'attacker_win' ? resourcesPlundered : null,
+      plunderRate: outcome === 'attacker_win' ? `${Math.round(Math.max(0.05, Math.min(0.35, 0.2 + ((req.user.level || 1) - (defender.level || 1)) * 0.01 - wallLevel * 0.02)) * 100)}%` : null
+    };
+
+    // Notify defender
+    const notifier = req.app.get('notificationService');
+    if (notifier) {
+      await notifier.send(defender.id, 'BATTLE',
+        outcome === 'attacker_win' ? 'Your city was attacked!' : 'Attack repelled!',
+        report.summary,
+        { battleReport: report }
+      );
+    }
+
+    res.json(report);
   } catch (error) {
     try { await transaction.rollback(); } catch (e) { /* already rolled back */ }
     console.error('Error during attack:', error);

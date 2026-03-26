@@ -12,7 +12,7 @@ const ActivityLog = sequelize.define('ActivityLog', {
     allowNull: false
   },
   type: {
-    type: DataTypes.ENUM('battle', 'election', 'trade', 'alliance', 'policy', 'event', 'achievement', 'city_founded'),
+    type: DataTypes.STRING(50),
     allowNull: false
   },
   title: {
