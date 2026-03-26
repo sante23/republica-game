@@ -48,7 +48,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (user) {
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const wsUrl = apiUrl.replace('/api', '');
+      // For relative URLs (/api), connect socket to current origin; for absolute, strip /api
+      const wsUrl = apiUrl.startsWith('/') ? window.location.origin : apiUrl.replace('/api', '');
       const newSocket = io(wsUrl, {
         transports: ['websocket', 'polling'],
       });

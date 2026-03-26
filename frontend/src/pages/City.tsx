@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { ArrowLeft, Users, Beaker, Home, Wheat, TreePine, Mountain, Pickaxe, Store, Shield, Castle, FlaskConical } from 'lucide-react';
 import CountdownTimer from '../components/CountdownTimer';
+import { useGame } from '../contexts/GameContext';
 import { playSound } from '../utils/sounds';
 import './City.css';
 
@@ -51,6 +52,7 @@ const RESOURCE_COLORS: Record<string, string> = {
 const City: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { updateCityResources } = useGame();
   const [city, setCity] = useState<CityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [building, setBuilding] = useState(false);
@@ -97,6 +99,7 @@ const City: React.FC = () => {
           resources: response.data.resources,
           population: response.data.population,
         });
+        if (id) updateCityResources(id, response.data.resources);
       }
     } catch (error) {
       console.error('Failed to update production:', error);
@@ -116,6 +119,7 @@ const City: React.FC = () => {
           resources: response.data.city.resources,
           buildings: response.data.city.buildings,
         });
+        if (id) updateCityResources(id, response.data.city.resources);
       }
       playSound('build');
     } catch (error: any) {
