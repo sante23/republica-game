@@ -78,7 +78,7 @@ const Dashboard: React.FC = () => {
           <div className="stat-content">
             <h3>Cities</h3>
             <p className="stat-value">{cities.length}</p>
-            <p className="stat-desc">Max: {Math.floor((user?.level || 0) / 5) + 1}</p>
+            <p className="stat-desc">Research Colonization to expand</p>
           </div>
         </div>
 
@@ -139,9 +139,7 @@ const Dashboard: React.FC = () => {
       <div className="cities-section">
         <div className="section-header">
           <h2>Your Cities</h2>
-          {cities.length < Math.floor((user?.level || 0) / 5) + 1 && (
-            <button className="btn-primary" onClick={() => setIsModalOpen(true)}>Found New City</button>
-          )}
+          <button className="btn-primary" onClick={() => setIsModalOpen(true)}>Found New City</button>
         </div>
 
         {loading ? (

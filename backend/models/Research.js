@@ -42,6 +42,18 @@ const TECH_TREE = {
   advancedEspionage: {
     name: 'Advanced Espionage', cost: { gold: 700, iron: 100 }, time: 4000,
     requires: ['espionage'], effects: { spySuccess: 1.25 }, category: 'military'
+  },
+  colonization1: {
+    name: 'Colonization', cost: { gold: 500, food: 300, wood: 200 }, time: 3600,
+    requires: [], effects: { maxCities: 2 }, category: 'economy'
+  },
+  colonization2: {
+    name: 'Advanced Colonization', cost: { gold: 2000, food: 1000, wood: 800, stone: 500 }, time: 7200,
+    requires: ['colonization1'], effects: { maxCities: 3 }, category: 'economy'
+  },
+  colonization3: {
+    name: 'Imperial Expansion', cost: { gold: 5000, food: 3000, iron: 1500, stone: 2000 }, time: 14400,
+    requires: ['colonization2'], effects: { maxCities: 4 }, category: 'economy'
   }
 };
 

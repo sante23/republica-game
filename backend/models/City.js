@@ -90,7 +90,8 @@ const City = sequelize.define('City', {
       sawmills: 1,
       mines: 0,
       markets: 1,
-      barracks: 0
+      barracks: 0,
+      researchCenter: 0
     }
   },
   production: {

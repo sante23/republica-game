@@ -1,6 +1,6 @@
 const express = require('express');
 const { cache } = require('../config/redis');
-const { City, User } = require('../models');
+const { City, User, Research } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
@@ -65,14 +65,32 @@ router.post('/create', [
       return res.status(400).json({ error: 'Location already occupied' });
     }
     
-    const userCitiesCount = await City.count({
-      where: { userId: req.user.id }
+    const userCities = await City.findAll({
+      where: { userId: req.user.id },
+      attributes: ['id']
     });
-    
-    const maxCities = Math.floor(req.user.level / 5) + 1;
+    const userCitiesCount = userCities.length;
+
+    // Max cities based on colonization research (1 free + 1 per colonization tech)
+    let maxCities = 1; // first city is always free
+    if (userCitiesCount > 0) {
+      const cityIds = userCities.map(c => c.id);
+      const colonizationTechs = ['colonization1', 'colonization2', 'colonization3'];
+      const completedColonizations = await Research.count({
+        where: {
+          cityId: cityIds,
+          techId: colonizationTechs,
+          status: 'completed'
+        }
+      });
+      maxCities = 1 + completedColonizations;
+    }
+
     if (userCitiesCount >= maxCities) {
-      return res.status(400).json({ 
-        error: `Maximum ${maxCities} cities allowed at level ${req.user.level}` 
+      const nextTech = ['colonization1', 'colonization2', 'colonization3'][userCitiesCount - 1];
+      const techName = nextTech ? Research.TECH_TREE[nextTech]?.name : 'max reached';
+      return res.status(400).json({
+        error: `Maximum ${maxCities} cities. Research "${techName}" to unlock more.`
       });
     }
     
@@ -204,7 +222,8 @@ router.put('/:id/build', [
       mines: { wood: 75, stone: 100, gold: 50 },
       markets: { wood: 100, stone: 100, gold: 100 },
       walls: { stone: 200, iron: 100, gold: 75 },
-      towers: { stone: 150, iron: 150, gold: 100 }
+      towers: { stone: 150, iron: 150, gold: 100 },
+      researchCenter: { wood: 150, stone: 200, iron: 100, gold: 200 }
     };
     
     const cost = buildingCosts[building];

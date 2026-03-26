@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
-import { ArrowLeft, Users, Beaker } from 'lucide-react';
+import { ArrowLeft, Users, Beaker, Home, Wheat, TreePine, Mountain, Pickaxe, Store, Shield, Castle, FlaskConical } from 'lucide-react';
 import CountdownTimer from '../components/CountdownTimer';
 import { playSound } from '../utils/sounds';
 import './City.css';
@@ -30,6 +30,23 @@ interface ResearchStatus {
   startedAt: string;
   completesAt: string;
 }
+
+interface BuildingDef {
+  name: string;
+  icon: React.ReactNode;
+  description: string;
+  production: string;
+  cost: string;
+}
+
+const RESOURCE_COLORS: Record<string, string> = {
+  food: '#f6ad55',
+  wood: '#68d391',
+  stone: '#a0aec0',
+  iron: '#fc8181',
+  gold: '#fbd38d',
+  energy: '#63b3ed',
+};
 
 const City: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -127,14 +144,80 @@ const City: React.FC = () => {
   if (loading) return <div className="loading">Loading city...</div>;
   if (!city) return <div>City not found</div>;
 
-  const BUILDING_INFO: Record<string, { icon: string; cost: string }> = {
-    houses: { icon: 'Houses', cost: '50 Wood, 25 Stone, 10 Gold' },
-    farms: { icon: 'Farms', cost: '100 Wood, 20 Gold' },
-    sawmills: { icon: 'Sawmills', cost: '50 Stone, 30 Gold' },
-    mines: { icon: 'Mines', cost: '75 Wood, 100 Stone, 50 Gold' },
-    markets: { icon: 'Markets', cost: '100 Wood, 100 Stone, 100 Gold' },
-    walls: { icon: 'Walls', cost: '200 Stone, 100 Iron, 75 Gold' },
-    towers: { icon: 'Towers', cost: '150 Stone, 150 Iron, 100 Gold' },
+  const BUILDINGS: Record<string, BuildingDef> = {
+    houses: {
+      name: 'Houses',
+      icon: <Home size={20} />,
+      description: 'Increase population capacity and energy production',
+      production: '+500 max pop, +0.5 energy/h each',
+      cost: '50 Wood, 25 Stone, 10 Gold',
+    },
+    farms: {
+      name: 'Farms',
+      icon: <Wheat size={20} />,
+      description: 'Produce food for your population',
+      production: '+5 food/h each',
+      cost: '100 Wood, 20 Gold',
+    },
+    sawmills: {
+      name: 'Sawmills',
+      icon: <TreePine size={20} />,
+      description: 'Process wood from nearby forests',
+      production: '+3 wood/h each',
+      cost: '50 Stone, 30 Gold',
+    },
+    mines: {
+      name: 'Mines',
+      icon: <Pickaxe size={20} />,
+      description: 'Extract stone, iron and gold from the earth',
+      production: '+2 stone/h, +1 iron/h, +0.5 gold/h each',
+      cost: '75 Wood, 100 Stone, 50 Gold',
+    },
+    markets: {
+      name: 'Markets',
+      icon: <Store size={20} />,
+      description: 'Generate gold through trade',
+      production: '+3 gold/h each',
+      cost: '100 Wood, 100 Stone, 100 Gold',
+    },
+    researchCenter: {
+      name: 'Research Center',
+      icon: <FlaskConical size={20} />,
+      description: 'Required to research new technologies',
+      production: 'Unlocks research capability',
+      cost: '150 Wood, 200 Stone, 100 Iron, 200 Gold',
+    },
+    walls: {
+      name: 'Walls',
+      icon: <Shield size={20} />,
+      description: 'Fortify your city against attacks',
+      production: 'Defense bonus (requires Masonry)',
+      cost: '200 Stone, 100 Iron, 75 Gold',
+    },
+    towers: {
+      name: 'Towers',
+      icon: <Castle size={20} />,
+      description: 'Watch towers for advanced defense',
+      production: 'Defense bonus (requires Fortification)',
+      cost: '150 Stone, 150 Iron, 100 Gold',
+    },
+  };
+
+  // Calculate current total production for display
+  const getCurrentProduction = (key: string): string => {
+    const count = city.buildings[key] || 0;
+    if (count === 0) return 'None';
+    switch (key) {
+      case 'houses': return `+${(count * 0.5).toFixed(1)} energy/h, ${(count * 500).toLocaleString()} max pop`;
+      case 'farms': return `+${count * 5} food/h`;
+      case 'sawmills': return `+${count * 3} wood/h`;
+      case 'mines': return `+${count * 2} stone/h, +${count} iron/h, +${(count * 0.5).toFixed(1)} gold/h`;
+      case 'markets': return `+${count * 3} gold/h`;
+      case 'researchCenter': return `${count} research slot(s)`;
+      case 'walls': return `Defense: Level ${count}`;
+      case 'towers': return `Defense: Level ${count}`;
+      default: return '';
+    }
   };
 
   return (
@@ -150,127 +233,150 @@ const City: React.FC = () => {
         </div>
       </header>
 
-      <div className="city-layout">
-        <section className="resources-panel">
-          <h2>Resources</h2>
-          <div className="resources-list">
-            {['food', 'wood', 'stone', 'iron', 'gold', 'energy'].map(res => (
-              <div className="resource-item" key={res}>
-                <span className="resource-name">{res.charAt(0).toUpperCase() + res.slice(1)}</span>
-                <span className="resource-amount">{Math.floor(city.resources[res] || 0)}</span>
-                <span className="production">+{city.production[res] || 0}/h</span>
-              </div>
-            ))}
+      {/* Resource Bar */}
+      <div className="city-resource-bar">
+        {['food', 'wood', 'stone', 'iron', 'gold', 'energy'].map(res => (
+          <div className="city-res-item" key={res}>
+            <span className="city-res-dot" style={{ background: RESOURCE_COLORS[res] }} />
+            <span className="city-res-name">{res.charAt(0).toUpperCase() + res.slice(1)}</span>
+            <span className="city-res-amount">{Math.floor(city.resources[res] || 0).toLocaleString()}</span>
+            <span className="city-res-prod">+{city.production[res] || 0}/h</span>
           </div>
-        </section>
+        ))}
+      </div>
 
-        <section className="buildings-panel">
-          <h2>Buildings</h2>
-          <div className="buildings-grid">
-            <div className="building-card">
-              <h3>Town Hall</h3>
-              <p>Level {city.buildings.townHall || 1}</p>
+      {/* Facilities - OGame style */}
+      <section className="facilities-panel">
+        <h2>Facilities</h2>
+        <div className="facilities-list">
+          {/* Town Hall - always first */}
+          <div className="facility-row facility-townhall">
+            <div className="facility-icon">
+              <Mountain size={20} />
             </div>
-            {Object.entries(BUILDING_INFO).map(([key, info]) => (
-              <div className="building-card" key={key}>
-                <h3>{info.icon}</h3>
-                <p>Count: {city.buildings[key] || 0}</p>
-                <button onClick={() => buildStructure(key)} disabled={building}>
-                  Build ({info.cost})
-                </button>
+            <div className="facility-info">
+              <div className="facility-name-row">
+                <h3>Town Hall</h3>
+                <span className="facility-level">Level {city.buildings.townHall || 1}</span>
               </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Research Panel */}
-        <section className="research-panel">
-          <div className="section-header">
-            <h2><Beaker size={18} /> Research</h2>
-            <button className="btn-toggle" onClick={() => setShowResearch(!showResearch)}>
-              {showResearch ? 'Hide' : 'Show'} Tech Tree
-            </button>
-          </div>
-
-          {/* Currently researching */}
-          {Object.entries(researches).filter(([, r]) => r.status === 'researching').map(([techId, r]) => (
-            <div key={techId} className="research-progress">
-              <span>Researching <strong>{techTree[techId]?.name}</strong></span>
-              <CountdownTimer
-                targetDate={r.completesAt}
-                startDate={r.startedAt}
-                showProgress={true}
-                onComplete={() => { fetchResearch(); playSound('achievement'); }}
-              />
+              <p className="facility-desc">The heart of your city. Cannot be built manually.</p>
             </div>
-          ))}
+          </div>
 
-          {showResearch && (
-            <div className="tech-tree-grid">
-              {Object.entries(techTree).map(([techId, tech]) => {
-                const status = researches[techId];
-                const isCompleted = status?.status === 'completed';
-                const isResearching = status?.status === 'researching';
-                const hasPrereqs = tech.requires.every(r => researches[r]?.status === 'completed');
-                const isAnyResearching = Object.values(researches).some(r => r.status === 'researching');
+          {Object.entries(BUILDINGS).map(([key, def]) => {
+            const count = city.buildings[key] || 0;
+            const currentProd = getCurrentProduction(key);
 
-                return (
-                  <div
-                    key={techId}
-                    className={`tech-card ${isCompleted ? 'completed' : ''} ${isResearching ? 'researching' : ''} ${!hasPrereqs ? 'locked' : ''}`}
-                  >
-                    <div className="tech-header">
-                      <h4>{tech.name}</h4>
-                      <span className={`tech-category cat-${tech.category}`}>{tech.category}</span>
-                    </div>
-                    <div className="tech-cost">
-                      {Object.entries(tech.cost).map(([res, amt]) => (
-                        <span key={res}>{amt} {res}</span>
-                      ))}
-                    </div>
-                    <div className="tech-time">{Math.round(tech.time / 60)}min</div>
-                    {tech.requires.length > 0 && (
-                      <div className="tech-requires">
-                        Requires: {tech.requires.map(r => techTree[r]?.name).join(', ')}
-                      </div>
-                    )}
-                    {isCompleted ? (
-                      <div className="tech-status-done">Completed</div>
-                    ) : isResearching ? (
-                      <CountdownTimer targetDate={status.completesAt} startDate={status.startedAt} showProgress />
-                    ) : (
-                      <button
-                        onClick={() => startResearch(techId)}
-                        disabled={!hasPrereqs || isAnyResearching || researchingTech === techId}
-                      >
-                        {!hasPrereqs ? 'Locked' : isAnyResearching ? 'Busy' : 'Research'}
-                      </button>
+            return (
+              <div className={`facility-row ${count > 0 ? 'facility-active' : ''}`} key={key}>
+                <div className="facility-icon" style={{ color: count > 0 ? '#667eea' : '#a0aec0' }}>
+                  {def.icon}
+                </div>
+                <div className="facility-info">
+                  <div className="facility-name-row">
+                    <h3>{def.name}</h3>
+                    <span className="facility-level">{count}</span>
+                  </div>
+                  <p className="facility-desc">{def.description}</p>
+                  <div className="facility-details">
+                    <span className="facility-per-unit">{def.production}</span>
+                    {count > 0 && (
+                      <span className="facility-current">Current: {currentProd}</span>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className="city-map">
-          <h2>City View</h2>
-          <div className="map-placeholder">
-            <div className="city-grid">
-              {Array.from({ length: 25 }).map((_, i) => (
-                <div key={i} className="grid-tile">
-                  {i === 12 && 'Town Hall'}
-                  {[0, 4, 20, 24].includes(i) && (city.buildings.houses > 0 ? 'House' : '')}
-                  {[6, 8, 16, 18].includes(i) && (city.buildings.farms > 0 ? 'Farm' : '')}
-                  {[10, 14].includes(i) && (city.buildings.sawmills > 0 ? 'Mill' : '')}
-                  {[1, 3, 21, 23].includes(i) && (city.buildings.walls > 0 ? 'Wall' : '')}
-                  {[2, 22].includes(i) && (city.buildings.towers > 0 ? 'Tower' : '')}
                 </div>
-              ))}
-            </div>
+                <div className="facility-action">
+                  <div className="facility-cost">{def.cost}</div>
+                  <button
+                    onClick={() => buildStructure(key)}
+                    disabled={building}
+                    className="facility-build-btn"
+                  >
+                    Build
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Research Panel */}
+      <section className="research-panel">
+        <div className="section-header">
+          <h2><Beaker size={18} /> Research</h2>
+          <button className="btn-toggle" onClick={() => setShowResearch(!showResearch)}>
+            {showResearch ? 'Hide' : 'Show'} Tech Tree
+          </button>
+        </div>
+
+        {(!city.buildings.researchCenter || city.buildings.researchCenter < 1) && (
+          <div className="research-warning">
+            Build a Research Center to unlock technology research.
           </div>
-        </section>
-      </div>
+        )}
+
+        {/* Currently researching */}
+        {Object.entries(researches).filter(([, r]) => r.status === 'researching').map(([techId, r]) => (
+          <div key={techId} className="research-progress">
+            <span>Researching <strong>{techTree[techId]?.name}</strong></span>
+            <CountdownTimer
+              targetDate={r.completesAt}
+              startDate={r.startedAt}
+              showProgress={true}
+              onComplete={() => { fetchResearch(); playSound('achievement'); }}
+            />
+          </div>
+        ))}
+
+        {showResearch && (
+          <div className="tech-tree-grid">
+            {Object.entries(techTree).map(([techId, tech]) => {
+              const status = researches[techId];
+              const isCompleted = status?.status === 'completed';
+              const isResearching = status?.status === 'researching';
+              const hasPrereqs = tech.requires.every(r => researches[r]?.status === 'completed');
+              const isAnyResearching = Object.values(researches).some(r => r.status === 'researching');
+              const hasResearchCenter = (city.buildings.researchCenter || 0) >= 1;
+
+              return (
+                <div
+                  key={techId}
+                  className={`tech-card ${isCompleted ? 'completed' : ''} ${isResearching ? 'researching' : ''} ${!hasPrereqs ? 'locked' : ''}`}
+                >
+                  <div className="tech-header">
+                    <h4>{tech.name}</h4>
+                    <span className={`tech-category cat-${tech.category}`}>{tech.category}</span>
+                  </div>
+                  <div className="tech-cost">
+                    {Object.entries(tech.cost).map(([res, amt]) => (
+                      <span key={res}>{amt} {res}</span>
+                    ))}
+                  </div>
+                  <div className="tech-time">{Math.round(tech.time / 60)}min</div>
+                  {tech.requires.length > 0 && (
+                    <div className="tech-requires">
+                      Requires: {tech.requires.map(r => techTree[r]?.name).join(', ')}
+                    </div>
+                  )}
+                  {isCompleted ? (
+                    <div className="tech-status-done">Completed</div>
+                  ) : isResearching ? (
+                    <CountdownTimer targetDate={status.completesAt} startDate={status.startedAt} showProgress />
+                  ) : (
+                    <button
+                      onClick={() => startResearch(techId)}
+                      disabled={!hasPrereqs || isAnyResearching || researchingTech === techId || !hasResearchCenter}
+                    >
+                      {!hasResearchCenter ? 'No Lab' : !hasPrereqs ? 'Locked' : isAnyResearching ? 'Busy' : 'Research'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

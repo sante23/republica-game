@@ -60,6 +60,12 @@ router.post('/start', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not your city' });
     }
 
+    // Require at least one Research Center
+    if (!city.buildings.researchCenter || city.buildings.researchCenter < 1) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Build a Research Center first' });
+    }
+
     // Check if already researched
     const existing = await Research.findOne({
       where: { cityId, techId },
