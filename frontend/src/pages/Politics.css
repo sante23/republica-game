@@ -257,3 +257,106 @@
     text-align: center;
   }
 }
+/* ===== Live election board (P0/P1/P2) ===== */
+.election-countdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #b9b9d6;
+  margin: 6px 0 10px;
+  flex-wrap: wrap;
+}
+.election-countdown strong { color: #fff; }
+.election-countdown .ballots {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #8f8fb0;
+}
+
+.prize-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #ffe0a3;
+  background: rgba(246, 173, 85, 0.08);
+  border: 1px solid rgba(246, 173, 85, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.prize-box strong { color: #ffd27a; }
+
+.cand-board { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.cand-empty { color: #8f8fb0; font-size: 13px; font-style: italic; padding: 8px 0; }
+
+.cand-row { display: flex; flex-direction: column; gap: 4px; }
+.cand-row.leading .cand-name { color: #fff; font-weight: 700; }
+
+.cand-meta { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #cfcfe6; }
+.cand-emoji { font-size: 15px; }
+.cand-name { color: #dcdcf0; }
+.leader-ico { color: #ffd27a; }
+
+.npc-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 700; letter-spacing: .4px;
+  color: #9ec5ff; background: rgba(99, 179, 237, 0.12);
+  border: 1px solid rgba(99, 179, 237, 0.35);
+  border-radius: 6px; padding: 1px 5px;
+}
+.cand-endorse {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; color: #8fe3a6;
+}
+
+.cand-barwrap {
+  position: relative;
+  height: 18px;
+  background: #0f0f1e;
+  border: 1px solid #2d2d44;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.cand-bar {
+  height: 100%;
+  border-radius: 5px 0 0 5px;
+  transition: width .6s cubic-bezier(.22,.61,.36,1);
+  min-width: 2px;
+}
+.cand-pct {
+  position: absolute;
+  right: 8px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; font-weight: 700; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+
+.endorse-btn {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; color: #cfe9d6;
+  background: rgba(76, 175, 80, 0.12);
+  border: 1px solid rgba(76, 175, 80, 0.35);
+  border-radius: 6px; padding: 2px 8px; cursor: pointer;
+  transition: background .15s;
+}
+.endorse-btn:hover:not(:disabled) { background: rgba(76, 175, 80, 0.25); }
+.endorse-btn:disabled { opacity: .4; cursor: default; }
+
+.campaign-box {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 12.5px; color: #c9b6ff;
+  background: rgba(159, 122, 234, 0.08);
+  border: 1px solid rgba(159, 122, 234, 0.25);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 12px;
+}
+.camp-btn {
+  font-size: 12px; color: #fff;
+  background: #5b3fa0; border: none; border-radius: 6px;
+  padding: 3px 10px; cursor: pointer; transition: background .15s;
+}
+.camp-btn:hover { background: #7152c4; }

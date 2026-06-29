@@ -32,7 +32,11 @@ const {
   Contract,
   Loan,
   Achievement,
-  ActivityLog
+  ActivityLog,
+  PirateRaid,
+  MarketTrade,
+  WorldBoss,
+  WarEffort
 } = require('./models');
 const Notification = require('./models/Notification');
 
@@ -123,20 +127,54 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });
 });
 
+// In-memory presence registry: userId -> { sockets: Set<socketId>, worldId }
+const presence = new Map();
+
+function onlineUserIdsInWorld(worldId) {
+  const ids = [];
+  for (const [userId, info] of presence) {
+    if (info.worldId === worldId && info.sockets.size > 0) ids.push(userId);
+  }
+  return ids;
+}
+
 io.on('connection', (socket) => {
   logger.info('New client connected', { socketId: socket.id });
-  
+
   socket.on('join-user', (userId) => {
+    if (!userId) return;
     socket.join(`user-${userId}`);
+    socket.data.userId = userId;
+
+    let info = presence.get(userId);
+    const wasOffline = !info || info.sockets.size === 0;
+    if (!info) {
+      info = { sockets: new Set(), worldId: socket.data.worldId || null };
+      presence.set(userId, info);
+    }
+    info.sockets.add(socket.id);
+    if (socket.data.worldId) info.worldId = socket.data.worldId;
+
+    // Announce to the world only on the first connection of this user
+    if (wasOffline && info.worldId) {
+      io.to(`world-${info.worldId}`).emit('presence-update', { userId, online: true });
+    }
   });
 
   socket.on('join-city', (cityId) => {
     socket.join(`city-${cityId}`);
     logger.debug(`Socket joined city`, { socketId: socket.id, cityId });
   });
-  
+
   socket.on('join-world', (worldId) => {
     socket.join(`world-${worldId}`);
+    socket.data.worldId = worldId;
+    if (socket.data.userId) {
+      const info = presence.get(socket.data.userId);
+      if (info) info.worldId = worldId;
+    }
+    // Send the joining socket a snapshot of who is currently online in this world
+    socket.emit('presence-snapshot', { online: onlineUserIdsInWorld(worldId) });
     logger.debug(`Socket joined world`, { socketId: socket.id, worldId });
   });
   
@@ -179,6 +217,21 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const userId = socket.data.userId;
+    if (userId) {
+      const info = presence.get(userId);
+      if (info) {
+        info.sockets.delete(socket.id);
+        if (info.sockets.size === 0) {
+          presence.delete(userId);
+          if (info.worldId) {
+            io.to(`world-${info.worldId}`).emit('presence-update', { userId, online: false });
+          }
+          // Persist last-seen time when the user fully goes offline
+          User.update({ lastLogin: new Date() }, { where: { id: userId } }).catch(() => {});
+        }
+      }
+    }
     logger.info('Client disconnected', { socketId: socket.id });
   });
 });
@@ -212,6 +265,7 @@ async function syncDatabase() {
     await Market.sync({ alter: true });
     await MilitaryUnit.sync({ alter: true });
     await Battle.sync({ alter: true });
+    await PirateRaid.sync({ alter: true });
     await Alliance.sync({ alter: true });
     await TradeRoute.sync({ alter: true });
     await AutoOrder.sync({ alter: true });
@@ -233,6 +287,9 @@ async function syncDatabase() {
 
     // Phase 5: Economy, social, and analytics models
     await MarketHistory.sync({ alter: true });
+    await MarketTrade.sync({ alter: true });
+    await WorldBoss.sync({ alter: true });
+    await WarEffort.sync({ alter: true });
     await Contract.sync({ alter: true });
     await Loan.sync({ alter: true });
     await Achievement.sync({ alter: true });

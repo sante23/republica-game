@@ -47,6 +47,31 @@ const GovernmentPosition = sequelize.define('GovernmentPosition', {
   regionId: {
     type: DataTypes.INTEGER,
     allowNull: true
+  },
+  // Approval rating (0-100) that drifts with the city's happiness & tax burden.
+  // Low approval surfaces a recall (impeachment) — governing is a loop, not a prize.
+  approval: {
+    type: DataTypes.INTEGER,
+    defaultValue: 50
+  },
+  // Cooldown anchor for the mayor production-boost power (was read but never persisted).
+  lastBoostAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  // Campaign promises carried over from the winning candidacy, each { id, label, kept }.
+  promises: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  // An NPC may hold a seat (caretaker) when no human runs/wins — userId stays null.
+  isNpc: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  npcName: {
+    type: DataTypes.STRING(60),
+    allowNull: true
   }
 }, {
   tableName: 'government_positions',

@@ -1,7 +1,8 @@
 const express = require('express');
-const { City, User } = require('../models');
+const { City, User, MarketHistory, MarketTrade } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { logActivity } = require('./activity');
+const { bumpQuests } = require('../services/questService');
 const sequelize = require('../config/database');
 
 const router = express.Router();
@@ -16,9 +17,32 @@ const NPC_PRICES = {
   energy: { buy: 4, sell: 1 }
 };
 
-// Get NPC prices
-router.get('/prices', authenticate, (req, res) => {
-  res.json(NPC_PRICES);
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const round2 = (v) => Math.round(v * 100) / 100;
+
+// Dynamic NPC quotes: drift toward the latest executed-trade fair price
+// (MarketHistory), with an NPC margin (buy > sell) and clamps around the base so a
+// manipulated history can't turn the merchant into a credit printer. Falls back to base.
+async function npcPrices(worldId) {
+  const out = {};
+  for (const [resource, base] of Object.entries(NPC_PRICES)) {
+    let fair = null;
+    try {
+      const hist = await MarketHistory.findOne({ where: { worldId, resource }, order: [['snapshotAt', 'DESC']] });
+      if (hist && hist.avgPrice > 0) fair = hist.avgPrice;
+    } catch (e) { /* fall back to base */ }
+    if (fair == null) { out[resource] = { ...base }; continue; }
+    let buy = clamp(fair * 1.3, base.sell * 1.2, base.buy * 3);    // NPC sells to player
+    let sell = clamp(fair * 0.7, base.sell * 0.3, base.buy * 0.9); // NPC buys from player
+    if (sell >= buy) sell = buy * 0.6;
+    out[resource] = { buy: round2(buy), sell: round2(sell) };
+  }
+  return out;
+}
+
+// Get NPC prices (dynamic, anchored to the executed-trade oracle)
+router.get('/prices', authenticate, async (req, res) => {
+  res.json(await npcPrices(req.user.worldId || 1));
 });
 
 // Buy from NPC (player buys resource, pays credits)
@@ -38,7 +62,8 @@ router.post('/buy', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Quantity must be 1-10000' });
     }
 
-    const totalCost = qty * NPC_PRICES[resource].buy;
+    const prices = await npcPrices(req.user.worldId || 1);
+    const totalCost = Math.round(qty * prices[resource].buy);
 
     const user = await User.findByPk(req.user.id, { transaction, lock: true });
     if (user.credits < totalCost) {
@@ -65,6 +90,9 @@ router.post('/buy', authenticate, async (req, res) => {
     await city.update({ resources: newResources }, { transaction });
 
     await transaction.commit();
+
+    bumpQuests(req.user.id, 'buy', resource, qty, req.app.get('io'));
+    MarketTrade.create({ worldId: req.user.worldId || 1, resource, price: prices[resource].buy, quantity: qty }).catch(() => {});
 
     logActivity(req.user.worldId || 1, 'trade',
       `${req.user.username} bought ${qty} ${resource} from NPC Merchant`,
@@ -115,7 +143,8 @@ router.post('/sell', authenticate, async (req, res) => {
       return res.status(400).json({ error: `Not enough ${resource}. Have ${Math.floor(city.resources[resource] || 0)}` });
     }
 
-    const totalEarnings = qty * NPC_PRICES[resource].sell;
+    const prices = await npcPrices(req.user.worldId || 1);
+    const totalEarnings = Math.round(qty * prices[resource].sell);
 
     // Deduct resources, add credits
     const newResources = { ...city.resources };
@@ -127,6 +156,9 @@ router.post('/sell', authenticate, async (req, res) => {
     await user.save({ transaction });
 
     await transaction.commit();
+
+    bumpQuests(req.user.id, 'sell', resource, qty, req.app.get('io'));
+    MarketTrade.create({ worldId: req.user.worldId || 1, resource, price: prices[resource].sell, quantity: qty }).catch(() => {});
 
     logActivity(req.user.worldId || 1, 'trade',
       `${req.user.username} sold ${qty} ${resource} to NPC Merchant`,

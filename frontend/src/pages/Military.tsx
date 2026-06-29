@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useGame } from '../contexts/GameContext';
 import api from '../config/api';
 import { Sword, Target, Users } from 'lucide-react';
+import CrisisPanel from '../components/CrisisPanel';
 import './Military.css';
 
 const UNIT_TYPES = {
@@ -36,13 +37,20 @@ const UNIT_TYPES = {
 };
 
 const Military: React.FC = () => {
-  const { cities } = useGame();
+  const { cities, fetchCities } = useGame();
   const [selectedCity, setSelectedCity] = useState<any>(null);
   const [units, setUnits] = useState<any[]>([]);
   const [battles, setBattles] = useState<any[]>([]);
   const [alliances, setAlliances] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('units');
+
+  // Load the player's cities on mount so a direct visit / refresh of /military
+  // still has a selectable city (cities live in context, otherwise only Dashboard fetches them).
+  useEffect(() => {
+    if (cities.length === 0) fetchCities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (cities.length > 0 && !selectedCity) {
@@ -89,7 +97,10 @@ const Military: React.FC = () => {
   };
 
   const trainUnits = async (unitType: string, quantity: number) => {
-    if (!selectedCity) return;
+    if (!selectedCity) {
+      alert('You need a city first. Go to Home and found your city, then come back to train troops.');
+      return;
+    }
     setLoading(true);
     try {
       await api.post('/military/train', {
@@ -114,6 +125,9 @@ const Military: React.FC = () => {
   return (
     <div className="military-page">
       <h1>⚔️ Military Command</h1>
+
+      {/* Cooperative endgame: world boss + war effort */}
+      <CrisisPanel />
 
       {/* City Selector */}
       <div className="city-selector">

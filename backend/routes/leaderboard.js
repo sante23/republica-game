@@ -42,7 +42,7 @@ router.get('/top/:metric', authenticate, async (req, res) => {
     }
 
     const users = await User.findAll({
-      where: { worldId },
+      where: { worldId, isBot: false },
       attributes,
       order: orderBy,
       limit,
@@ -88,10 +88,10 @@ router.get('/stats', authenticate, async (req, res) => {
     const worldId = req.user.worldId || 1;
 
     const [totalUsers, totalCities, stats] = await Promise.all([
-      User.count({ where: { worldId } }),
+      User.count({ where: { worldId, isBot: false } }),
       City.count({ where: { worldId } }),
       User.findOne({
-        where: { worldId },
+        where: { worldId, isBot: false },
         attributes: [
           [sequelize.fn('AVG', sequelize.col('level')), 'avgLevel'],
           [sequelize.fn('MAX', sequelize.col('level')), 'maxLevel'],
@@ -103,7 +103,7 @@ router.get('/stats', authenticate, async (req, res) => {
 
     // Get top player
     const topPlayer = await User.findOne({
-      where: { worldId },
+      where: { worldId, isBot: false },
       attributes: ['username', 'level'],
       order: [['level', 'DESC'], ['experience', 'DESC']],
       limit: 1

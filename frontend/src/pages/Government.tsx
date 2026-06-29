@@ -238,25 +238,56 @@ const Government: React.FC = () => {
             <p>No positions filled yet</p>
           ) : (
             <div className="positions-list">
-              {positions.map(position => (
-                <div key={position.id} className="position-card">
-                  <div className="position-title">
-                    {position.position === 'president' && '👑 President'}
-                    {position.position === 'minister_economy' && '💼 Minister of Economy'}
-                    {position.position === 'minister_defense' && '⚔️ Minister of Defense'}
-                  </div>
-                  <div className="holder">
-                    {position.holder ? (
-                      <strong>{position.holder.username}</strong>
-                    ) : (
-                      <em>Vacant</em>
+              {positions.map(position => {
+                const titles: Record<string, string> = {
+                  president: '👑 President',
+                  governor: '🏷️ Governor',
+                  mayor: '🏛️ Mayor',
+                  minister_economy: '💼 Minister of Economy',
+                  minister_defense: '⚔️ Minister of Defense',
+                };
+                const approval = position.approval;
+                const promises = position.promises || [];
+                const approvalColor = approval >= 60 ? '#4CAF50' : approval >= 30 ? '#f6ad55' : '#fc8181';
+                return (
+                  <div key={position.id} className="position-card">
+                    <div className="position-title">{titles[position.position] || position.position}</div>
+                    <div className="holder">
+                      {position.isNpc ? (
+                        <strong>🤖 {position.npcName} <span className="npc-tag">NPC</span></strong>
+                      ) : position.holder ? (
+                        <strong>{position.holder.username}</strong>
+                      ) : (
+                        <em>Vacant</em>
+                      )}
+                    </div>
+                    {position.startDate && (
+                      <small>Since: {new Date(position.startDate).toLocaleDateString()}</small>
+                    )}
+                    {approval != null && (
+                      <div className="approval">
+                        <div className="approval-head">
+                          <span>Approval</span><span>{approval}%</span>
+                        </div>
+                        <div className="approval-bar">
+                          <div className="approval-fill" style={{ width: `${approval}%`, background: approvalColor }} />
+                        </div>
+                      </div>
+                    )}
+                    {promises.length > 0 && (
+                      <div className="scorecard">
+                        <div className="scorecard-title">Campaign promises</div>
+                        {promises.map((p: any, i: number) => (
+                          <div key={i} className="promise-row">
+                            <span>{p.kept === true ? '✅' : p.kept === false ? '❌' : '⏳'}</span>
+                            <span className="promise-label">{p.label}</span>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {position.startDate && (
-                    <small>Since: {new Date(position.startDate).toLocaleDateString()}</small>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

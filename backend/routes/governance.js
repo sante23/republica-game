@@ -327,6 +327,17 @@ router.post('/impeachment/:id/vote', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Impeachment vote not found' });
     }
 
+    // One vote per user (was unguarded -> a single account could pass an impeachment)
+    const voters = impeachment.voters || {};
+    if (Object.prototype.hasOwnProperty.call(voters, req.user.id)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'You have already voted on this impeachment' });
+    }
+    voters[req.user.id] = !!support;
+    impeachment.voters = voters;
+    impeachment.changed('voters', true);
+    await impeachment.save({ transaction });
+
     // Update vote count
     if (support) {
       await impeachment.increment('votesFor', { transaction });
@@ -415,12 +426,14 @@ router.post('/mayor/boost', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'City not found' });
     }
 
-    // Create a world event for the boost
+    // Create a world event for the boost. The type MUST be a valid WorldEvent
+    // ENUM value — 'festival' fits a positive buff. 'mayor_boost' was never in the
+    // ENUM and the field was `name` instead of `title`, so this threw 500 every time.
     const { WorldEvent } = require('../models');
-    await WorldEvent.create({
+    const boostEvent = await WorldEvent.create({
       worldId,
-      type: 'mayor_boost',
-      name: `Mayor's Production Decree`,
+      type: 'festival',
+      title: `Mayor's Production Decree`,
       description: `Mayor ${req.user.username} has decreed a production boost for ${city.name}!`,
       effects: { allProduction: 1.1 },
       affectedCityId: cityId,
@@ -429,7 +442,19 @@ router.post('/mayor/boost', authenticate, async (req, res) => {
       endsAt: new Date(Date.now() + 4 * 60 * 60 * 1000)
     }, { transaction });
 
+    // Persist the cooldown anchor (was read at the top but never written -> 24h cooldown never enforced)
+    mayorPosition.lastBoostAt = new Date();
+    await mayorPosition.save({ transaction });
+
     await transaction.commit();
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`world-${worldId}`).emit('world-event', {
+        id: boostEvent.id, type: 'festival', title: boostEvent.title,
+        description: boostEvent.description, effects: boostEvent.effects, endsAt: boostEvent.endsAt
+      });
+    }
 
     logActivity(worldId, 'policy',
       `Mayor ${req.user.username} activated a production boost for ${city.name}`,
@@ -556,61 +581,9 @@ router.get('/mayor/:cityId', authenticate, async (req, res) => {
   }
 });
 
-// Execute election results
-router.post('/execute-election', authenticate, async (req, res) => {
-  const transaction = await sequelize.transaction();
-
-  try {
-    const worldId = req.user.worldId || 1;
-
-    // Get winner of current election
-    const winner = await Election.findOne({
-      where: { worldId },
-      include: [{ model: User, as: 'candidate', attributes: ['id', 'username'] }],
-      order: [['votes', 'DESC']],
-      transaction
-    });
-
-    if (!winner) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'No candidates found' });
-    }
-
-    // Appoint as President
-    const [position] = await GovernmentPosition.findOrCreate({
-      where: { worldId, position: 'president' },
-      defaults: {
-        userId: winner.userId,
-        startDate: new Date()
-      },
-      transaction
-    });
-
-    if (position) {
-      await position.update({
-        userId: winner.userId,
-        startDate: new Date(),
-        endDate: null
-      }, { transaction });
-    }
-
-    // Clear old candidates and votes
-    await Election.destroy({
-      where: { worldId },
-      transaction
-    });
-
-    await transaction.commit();
-
-    res.json({
-      success: true,
-      message: `${winner.candidate?.username} has been appointed as President!`
-    });
-  } catch (error) {
-    await transaction.rollback();
-    console.error('Error executing election:', error);
-    res.status(500).json({ error: 'Failed to execute election' });
-  }
-});
+// NOTE: the old POST /execute-election route was removed. It was dead and
+// dangerous: it ordered by a non-existent `votes` column, read a non-existent
+// `candidate` association, and ran Election.destroy() on the ENTIRE world.
+// Election completion is owned solely by scheduler.completeElection().
 
 module.exports = router;

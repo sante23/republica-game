@@ -126,6 +126,40 @@
   color: #e2e8f0;
   font-size: 12px;
   font-weight: 700;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+/* Green pulse when a fresh server tick increases a resource */
+.res-flash {
+  color: #68d391 !important;
+  text-shadow: 0 0 8px rgba(104, 211, 145, 0.8);
+}
+
+/* Live "settlers online" indicator */
+.online-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #a0aec0;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.online-count-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #48bb78;
+  box-shadow: 0 0 6px #48bb78;
+  animation: online-breathe 2s ease-in-out infinite;
+}
+@keyframes online-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@media (max-width: 768px) {
+  .online-count { font-size: 11px; }
 }
 
 @media (max-width: 1024px) {

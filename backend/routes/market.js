@@ -1,11 +1,12 @@
 const express = require('express');
 const { cache } = require('../config/redis');
-const { Market, City, User } = require('../models');
+const { Market, City, User, MarketTrade } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
 const { logActivity } = require('./activity');
+const { bumpQuests } = require('../services/questService');
 
 const router = express.Router();
 
@@ -105,6 +106,9 @@ router.post('/sell', [
     });
     
     await cache.delPattern('market-listings:*');
+
+    bumpQuests(req.user.id, 'sell', resource, quantity, io);
+
     res.status(201).json({
       message: 'Listing created successfully',
       listing
@@ -203,7 +207,12 @@ router.post('/buy/:id', authenticate, async (req, res) => {
       seller: seller.username,
       buyer: buyer.username
     });
-    
+
+    // Record the executed trade (honest price oracle source)
+    MarketTrade.create({ worldId: listing.worldId, resource: listing.resource, price: listing.pricePerUnit, quantity: listing.quantity }).catch(() => {});
+
+    bumpQuests(buyer.id, 'buy', listing.resource, listing.quantity, io);
+
     res.json({
       message: 'Purchase successful',
       transaction: {

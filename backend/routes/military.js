@@ -1,11 +1,12 @@
 const express = require('express');
-const { MilitaryUnit, UNIT_TYPES, Battle, Alliance, City, User } = require('../models');
+const { MilitaryUnit, UNIT_TYPES, Battle, Alliance, City, User, WorldBoss } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 
 const { body, validationResult } = require('express-validator');
 const { logActivity } = require('./activity');
+const { bumpQuests } = require('../services/questService');
 
 const router = express.Router();
 
@@ -101,6 +102,8 @@ router.post('/train', authenticate, [
     }
 
     await transaction.commit();
+
+    bumpQuests(req.user.id, 'train', unitType, quantity, req.app.get('io'));
 
     res.json({
       success: true,
@@ -370,7 +373,7 @@ router.post('/attack', authenticate, [
     // Notify defender
     const notifier = req.app.get('notificationService');
     if (notifier) {
-      await notifier.send(defender.id, 'BATTLE',
+      await notifier.send(defender.id, outcome === 'attacker_win' ? 'BATTLE_ATTACK' : 'BATTLE_DEFENSE',
         outcome === 'attacker_win' ? 'Your city was attacked!' : 'Attack repelled!',
         report.summary,
         { battleReport: report }
@@ -497,6 +500,117 @@ router.get('/alliances', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error fetching alliances:', error);
     res.status(500).json({ error: 'Failed to fetch alliances' });
+  }
+});
+
+// ============================================
+// WORLD BOSS (cooperative PvE)
+// ============================================
+const BOSS_COOLDOWN_MS = 5 * 60 * 1000;
+
+router.get('/boss', authenticate, async (req, res) => {
+  try {
+    const worldId = req.user.worldId || 1;
+    const boss = await WorldBoss.findOne({ where: { worldId, status: 'active' }, order: [['startsAt', 'DESC']] });
+    if (!boss) return res.json({ boss: null });
+    const contrib = boss.contributions || {};
+    const mine = contrib[req.user.id];
+    res.json({
+      boss: {
+        id: boss.id, name: boss.name, maxHp: boss.maxHp, hp: boss.hp, status: boss.status,
+        endsAt: boss.endsAt, rewardPool: boss.rewardPool,
+        contributors: Object.keys(contrib).length,
+        top: Object.values(contrib).sort((a, b) => b.damage - a.damage).slice(0, 5).map(c => ({ username: c.username, damage: c.damage })),
+        myDamage: mine ? mine.damage : 0
+      }
+    });
+  } catch (e) {
+    console.error('Error fetching boss:', e);
+    res.status(500).json({ error: 'Failed to fetch boss' });
+  }
+});
+
+router.post('/boss/:id/attack', authenticate, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { cityId, units } = req.body;
+    const boss = await WorldBoss.findOne({ where: { id: req.params.id, status: 'active' }, transaction, lock: true });
+    if (!boss) { await transaction.rollback(); return res.status(404).json({ error: 'No active boss' }); }
+
+    const contrib = boss.contributions || {};
+    const mine = contrib[req.user.id];
+    if (mine && mine.lastHitAt && (Date.now() - new Date(mine.lastHitAt).getTime()) < BOSS_COOLDOWN_MS) {
+      await transaction.rollback();
+      const mins = Math.ceil((BOSS_COOLDOWN_MS - (Date.now() - new Date(mine.lastHitAt).getTime())) / 60000);
+      return res.status(400).json({ error: `Your fleet is regrouping. Try again in ${mins} min.` });
+    }
+
+    const city = await City.findByPk(cityId, { transaction, lock: true });
+    if (!city || city.userId !== req.user.id) { await transaction.rollback(); return res.status(403).json({ error: 'Not your city' }); }
+
+    const cityUnits = await MilitaryUnit.findAll({ where: { cityId }, transaction });
+    let damage = 0;
+    const committed = {};
+    for (const u of cityUnits) {
+      const use = Math.min((units && units[u.unitType]) || 0, u.quantity);
+      if (use > 0) { damage += use * u.attackPower; committed[u.unitType] = use; }
+    }
+    if (damage <= 0) { await transaction.rollback(); return res.status(400).json({ error: 'Send at least one unit' }); }
+
+    // Attacker takes ~15% losses fighting the armada
+    for (const [unitType, use] of Object.entries(committed)) {
+      const loss = Math.floor(use * 0.15);
+      if (loss > 0) await MilitaryUnit.decrement('quantity', { by: loss, where: { cityId, unitType }, transaction });
+    }
+
+    const dealt = Math.min(damage, boss.hp);
+    boss.hp = Math.max(0, boss.hp - damage);
+    contrib[req.user.id] = { username: req.user.username, damage: (mine ? mine.damage : 0) + dealt, lastHitAt: new Date() };
+    boss.contributions = contrib;
+    boss.changed('contributions', true);
+
+    let defeated = false;
+    if (boss.hp <= 0) { boss.status = 'defeated'; boss.defeatedAt = new Date(); defeated = true; }
+    await boss.save({ transaction });
+
+    let rewards = [];
+    let myReward = null;
+    if (defeated) {
+      const total = Object.values(contrib).reduce((s, c) => s + c.damage, 0) || 1;
+      const pool = boss.rewardPool || {};
+      for (const [uid, c] of Object.entries(contrib)) {
+        const share = c.damage / total;
+        const credits = Math.floor((pool.credits || 0) * share);
+        if (credits > 0) {
+          const u = await User.findByPk(uid, { transaction, lock: true });
+          if (u) { u.credits += credits; await u.save({ transaction }); }
+        }
+        rewards.push({ uid, username: c.username, credits });
+        if (uid === req.user.id) myReward = { credits };
+      }
+    }
+
+    await transaction.commit();
+
+    const io = req.app.get('io');
+    if (io) io.to(`world-${boss.worldId}`).emit('world-boss', { id: boss.id, hp: boss.hp, maxHp: boss.maxHp, status: boss.status, defeated });
+
+    if (defeated) {
+      const notifier = req.app.get('notificationService');
+      if (notifier) {
+        for (const r of rewards) {
+          await notifier.send(r.uid, 'SYSTEM', `${boss.name} defeated!`,
+            `The armada is destroyed! Your share of the spoils: ${r.credits} credits.`, { bossId: boss.id, credits: r.credits });
+        }
+      }
+      logActivity(boss.worldId, 'battle', `${boss.name} was defeated by the realm!`, req.user.id, null, { bossId: boss.id });
+    }
+
+    res.json({ success: true, damageDealt: dealt, bossHp: boss.hp, maxHp: boss.maxHp, defeated, myReward });
+  } catch (e) {
+    try { await transaction.rollback(); } catch (_) { /* already rolled back */ }
+    console.error('Error attacking boss:', e);
+    res.status(500).json({ error: 'Failed to attack boss' });
   }
 });
 

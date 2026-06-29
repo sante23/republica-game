@@ -2,6 +2,7 @@ const express = require('express');
 const { Research, City } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const sequelize = require('../config/database');
+const { bumpQuests } = require('../services/questService');
 
 const router = express.Router();
 const TECH_TREE = Research.TECH_TREE;
@@ -119,6 +120,8 @@ router.post('/start', authenticate, async (req, res) => {
     }, { transaction });
 
     await transaction.commit();
+
+    bumpQuests(req.user.id, 'research', 'any', 1, req.app.get('io'));
 
     res.json({
       success: true,

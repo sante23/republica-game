@@ -15,6 +15,10 @@ const AutoOrder = sequelize.define('AutoOrder', {
       key: 'id'
     }
   },
+  worldId: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
   resourceType: {
     type: DataTypes.STRING(20),
     allowNull: false

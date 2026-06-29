@@ -2,9 +2,10 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useGame } from "../contexts/GameContext";
-import { Home, ShoppingCart, Vote, Trophy, Map, Sword, BarChart3, Landmark, LogOut, Award, CreditCard, FileText } from "lucide-react";
+import { Home, ShoppingCart, Vote, Trophy, Map, Sword, BarChart3, Landmark, LogOut, Award, CreditCard, FileText, Building2 } from "lucide-react";
 import "./Navbar.css";
 import NotificationBell from "./NotificationBell";
+import { useTickingResources } from "../hooks/useTickingResources";
 
 const RESOURCE_COLORS: Record<string, string> = {
   food: '#f6ad55',
@@ -18,15 +19,21 @@ const RESOURCE_COLORS: Record<string, string> = {
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const { cities, selectedCity } = useGame();
-
-  if (!user) return null;
+  const { cities, selectedCity, onlineUsers } = useGame();
 
   // Use selectedCity if available, otherwise first city
   const displayCity = selectedCity || (cities.length > 0 ? cities[0] : null);
 
+  // Live-ticking resource amounts for the always-visible top bar
+  const { display: liveRes, flash } = useTickingResources(displayCity?.resources, displayCity?.production);
+
+  if (!user) return null;
+
   const navItems = [
     { path: "/", icon: <Home size={18} />, label: "Home" },
+    // Direct link to the player's city (build/upgrade mines, farms, etc.).
+    // Without this the city screen is only reachable by clicking a card on the Dashboard.
+    ...(displayCity ? [{ path: `/city/${displayCity.id}`, icon: <Building2 size={18} />, label: "City" }] : []),
     { path: "/market", icon: <ShoppingCart size={18} />, label: "Market" },
     { path: "/military", icon: <Sword size={18} />, label: "Military" },
     { path: "/economy", icon: <BarChart3 size={18} />, label: "Economy" },
@@ -58,6 +65,9 @@ const Navbar: React.FC = () => {
           ))}
         </div>
         <div className="navbar-user">
+          <span className="online-count" title="Settlers online now">
+            <span className="online-count-dot" /> {onlineUsers.size} online
+          </span>
           <NotificationBell />
           <Link to="/profile" className="user-info">
             Lv.{user.level} | {user.credits} G
@@ -74,7 +84,9 @@ const Navbar: React.FC = () => {
             <div className="res-topbar-item" key={res}>
               <span className="res-topbar-dot" style={{ background: RESOURCE_COLORS[res] }} />
               <span className="res-topbar-label">{res.charAt(0).toUpperCase() + res.slice(1)}</span>
-              <span className="res-topbar-val">{Math.floor(displayCity.resources?.[res] || 0).toLocaleString()}</span>
+              <span className={`res-topbar-val ${flash[res] ? 'res-flash' : ''}`}>
+                {Math.floor(liveRes[res] ?? displayCity.resources?.[res] ?? 0).toLocaleString()}
+              </span>
             </div>
           ))}
         </div>

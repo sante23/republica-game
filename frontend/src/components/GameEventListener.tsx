@@ -18,11 +18,22 @@ const GameEventListener: React.FC = () => {
         playSound('notification');
       },
       'election-completed': (data: any) => {
-        const msg = data.winnerName
-          ? `${data.position} election won by ${data.winnerName}!`
-          : `${data.position} election ended with no winner.`;
+        let msg: string;
+        if (data.recalled) {
+          msg = `⚠️ The ${data.position} was recalled — approval collapsed!`;
+        } else if (data.winnerName) {
+          msg = `${data.position} election won by ${data.winnerName}${data.isNpc ? ' 🤖 (NPC caretaker)' : '!'}`;
+        } else {
+          msg = `${data.position} election ended with no winner.`;
+        }
         toast.info(msg, 6000);
         playSound('notification');
+      },
+      'election-phase': (data: any) => {
+        if (data.status === 'VOTING') {
+          toast.info(`🗳️ Voting is now open for the ${data.position} election!`, 6000);
+          playSound('notification');
+        }
       },
       'market-transaction': (data: any) => {
         if (data.seller === user.username) {

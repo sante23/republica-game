@@ -8,6 +8,11 @@ interface Candidate {
   program?: string;
   votes: number;
   percentage: number;
+  isNpc?: boolean;
+  platform?: { key: string; label: string; emoji: string; color: string } | null;
+  promises?: string[];
+  endorsements?: number;
+  campaignSpend?: number;
 }
 
 interface ViewCandidatesModalProps {
@@ -84,19 +89,36 @@ const ViewCandidatesModal: React.FC<ViewCandidatesModalProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       {index === 0 && <span style={{ fontSize: '24px' }}>🏆</span>}
+                      {candidate.platform && <span style={{ fontSize: '20px' }} title={candidate.platform.label}>{candidate.platform.emoji}</span>}
                       <strong style={{ color: '#fff', fontSize: '18px' }}>{candidate.username}</strong>
+                      {candidate.isNpc && (
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#9ec5ff', border: '1px solid rgba(99,179,237,0.35)', background: 'rgba(99,179,237,0.12)', borderRadius: '6px', padding: '1px 5px' }}>NPC</span>
+                      )}
+                      {!!(candidate.endorsements && candidate.endorsements > 0) && (
+                        <span style={{ fontSize: '12px', color: '#8fe3a6' }}>👍 {candidate.endorsements}</span>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ color: '#4CAF50', fontSize: '20px', fontWeight: 'bold' }}>
-                        {candidate.votes} votes
+                        {candidate.votes}
                       </div>
                       <div style={{ color: '#888', fontSize: '14px' }}>
                         {candidate.percentage}%
                       </div>
                     </div>
                   </div>
+
+                  {candidate.promises && candidate.promises.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                      {candidate.promises.map((p, i) => (
+                        <span key={i} style={{ fontSize: '11.5px', color: '#bff0c6', background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '999px', padding: '2px 9px' }}>
+                          🎯 {p}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {candidate.program && (
                     <div style={{

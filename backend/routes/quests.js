@@ -2,6 +2,7 @@ const express = require('express');
 const { Op } = require('sequelize');
 const { User, City } = require('../models');
 const DailyQuest = require('../models/DailyQuest');
+const { refreshAccumulateQuests } = require('../services/questService');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
@@ -39,6 +40,13 @@ router.get('/daily', authenticate, async (req, res) => {
       quests = await DailyQuest.bulkCreate(questRecords);
     }
 
+    // Grade threshold (accumulate) quests against current state, then re-read
+    await refreshAccumulateQuests(req.user.id);
+    quests = await DailyQuest.findAll({
+      where: { userId: req.user.id, expiresAt: { [Op.gt]: now } },
+      order: [['createdAt', 'ASC']]
+    });
+
     // Enrich with template data
     const enriched = quests.map(q => {
       const template = DailyQuest.QUEST_TEMPLATES.find(t => t.id === q.questTemplateId);
@@ -58,38 +66,11 @@ router.get('/daily', authenticate, async (req, res) => {
   }
 });
 
-// Update quest progress (called internally or via event)
-router.post('/progress', authenticate, async (req, res) => {
-  try {
-    const { questType, target, amount } = req.body;
-    const now = new Date();
-
-    const quests = await DailyQuest.findAll({
-      where: {
-        userId: req.user.id,
-        completed: false,
-        expiresAt: { [Op.gt]: now }
-      }
-    });
-
-    const updated = [];
-    for (const quest of quests) {
-      const template = DailyQuest.QUEST_TEMPLATES.find(t => t.id === quest.questTemplateId);
-      if (!template) continue;
-
-      if (template.type === questType && (template.target === target || template.target === 'any')) {
-        const newProgress = Math.min(quest.progress + (amount || 1), quest.required);
-        const completed = newProgress >= quest.required;
-        await quest.update({ progress: newProgress, completed });
-        updated.push({ id: quest.id, progress: newProgress, completed });
-      }
-    }
-
-    res.json({ updated });
-  } catch (error) {
-    console.error('Error updating quest progress:', error);
-    res.status(500).json({ error: 'Failed to update progress' });
-  }
+// Quest progress is advanced SERVER-SIDE only (services/questService.bumpQuests),
+// invoked in-process after committed actions. This client route is intentionally
+// disabled — trusting client-supplied {questType,target,amount} was a reward faucet.
+router.post('/progress', authenticate, (req, res) => {
+  res.status(403).json({ error: 'Quest progress is updated automatically by your actions.' });
 });
 
 // Claim quest reward

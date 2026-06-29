@@ -1,8 +1,9 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
-const { User } = require('../models');
+const { User, City } = require('../models');
 const { authenticate } = require('../middleware/auth');
+const { logActivity } = require('./activity');
 
 const router = express.Router();
 
@@ -45,10 +46,49 @@ router.post('/register', [
     });
     
     const token = generateToken(user.id);
-    
+
     // Set 72h newbie protection
     user.protectedUntil = new Date(Date.now() + 72 * 60 * 60 * 1000);
     await user.save();
+
+    // Auto-found the player's first city (capital) so new users can play immediately.
+    // Without a city the whole game (build, train, research) is a silent no-op.
+    try {
+      const worldId = user.worldId || 1;
+      let capital = null;
+      for (let attempt = 0; attempt < 12 && !capital; attempt++) {
+        const x = Math.floor(Math.random() * 2001) - 1000;
+        const y = Math.floor(Math.random() * 2001) - 1000;
+        const occupied = await City.findOne({ where: { worldId, x, y } });
+        if (occupied) continue;
+        capital = await City.create({
+          userId: user.id,
+          name: `${username}'s Capital`,
+          x,
+          y,
+          worldId,
+          isCapital: true
+        });
+      }
+      if (capital) {
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`world-${worldId}`).emit('new-city', {
+            id: capital.id,
+            name: capital.name,
+            x: capital.x,
+            y: capital.y,
+            owner: user.username
+          });
+        }
+        logActivity(worldId, 'city_founded',
+          `${user.username} founded the city of ${capital.name}`,
+          user.id, null, { cityId: capital.id, x: capital.x, y: capital.y });
+      }
+    } catch (cityErr) {
+      // Non-fatal: registration still succeeds; the player can found a city manually.
+      console.error('Auto-city creation failed:', cityErr);
+    }
 
     res.status(201).json({
       message: 'Registration successful',
