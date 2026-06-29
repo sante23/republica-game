@@ -8,6 +8,10 @@ interface Candidate {
   program?: string;
   votes: number;
   percentage: number;
+  isNpc?: boolean;
+  platform?: { key: string; label: string; emoji: string; color: string } | null;
+  promises?: string[];
+  endorsements?: number;
 }
 
 interface VoteModalProps {
@@ -116,9 +120,24 @@ const VoteModal: React.FC<VoteModalProps> = ({
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <strong style={{ color: '#fff' }}>{candidate.username}</strong>
-                      <span style={{ color: '#4CAF50' }}>{candidate.votes} votes ({candidate.percentage}%)</span>
+                      <strong style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {candidate.platform && <span title={candidate.platform.label}>{candidate.platform.emoji}</span>}
+                        {candidate.username}
+                        {candidate.isNpc && (
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#9ec5ff', border: '1px solid rgba(99,179,237,0.35)', background: 'rgba(99,179,237,0.12)', borderRadius: '6px', padding: '1px 5px' }}>NPC</span>
+                        )}
+                      </strong>
+                      <span style={{ color: '#4CAF50' }}>{candidate.votes} ({candidate.percentage}%)</span>
                     </div>
+                    {candidate.promises && candidate.promises.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '6px' }}>
+                        {candidate.promises.map((p, i) => (
+                          <span key={i} style={{ fontSize: '11px', color: '#bff0c6', background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '999px', padding: '1px 8px' }}>
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {candidate.program && (
                       <p style={{ fontSize: '13px', color: '#aaa', margin: 0 }}>
                         {candidate.program}

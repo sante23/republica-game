@@ -1,5 +1,5 @@
 const express = require('express');
-const { TradeRoute, AutoOrder, TaxSettings, City, User, GovernmentPosition } = require('../models');
+const { TradeRoute, AutoOrder, TaxSettings, City, User, GovernmentPosition, WarEffort, WorldEvent } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const sequelize = require('../config/database');
 const { Op } = require('sequelize');
@@ -186,6 +186,7 @@ router.post('/auto-orders', authenticate, async (req, res) => {
 
     const order = await AutoOrder.create({
       userId: req.user.id,
+      worldId: req.user.worldId || 1,
       resourceType,
       orderType,
       price,
@@ -312,6 +313,92 @@ router.put('/tax-settings', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error updating tax settings:', error);
     res.status(500).json({ error: 'Failed to update tax settings' });
+  }
+});
+
+// ============================================
+// WAR EFFORT (cooperative resource drive)
+// ============================================
+
+router.get('/war-effort', authenticate, async (req, res) => {
+  try {
+    const worldId = req.user.worldId || 1;
+    const effort = await WarEffort.findOne({ where: { worldId, status: 'active' }, order: [['startsAt', 'DESC']] });
+    if (!effort) return res.json({ effort: null });
+    const contributors = effort.contributors || {};
+    const mine = contributors[req.user.id];
+    res.json({
+      effort: {
+        id: effort.id, title: effort.title, resource: effort.resource, goal: effort.goal,
+        contributed: effort.contributed, endsAt: effort.endsAt,
+        contributors: Object.keys(contributors).length,
+        myAmount: mine ? mine.amount : 0
+      }
+    });
+  } catch (e) {
+    console.error('Error fetching war effort:', e);
+    res.status(500).json({ error: 'Failed to fetch war effort' });
+  }
+});
+
+router.post('/war-effort/:id/donate', authenticate, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const amount = parseInt(req.body.amount);
+    const { cityId } = req.body;
+    if (!amount || amount < 1) { await transaction.rollback(); return res.status(400).json({ error: 'Invalid amount' }); }
+
+    const effort = await WarEffort.findOne({ where: { id: req.params.id, status: 'active' }, transaction, lock: true });
+    if (!effort) { await transaction.rollback(); return res.status(404).json({ error: 'No active war effort' }); }
+
+    const city = await City.findByPk(cityId, { transaction, lock: true });
+    if (!city || city.userId !== req.user.id) { await transaction.rollback(); return res.status(403).json({ error: 'Not your city' }); }
+    if ((city.resources[effort.resource] || 0) < amount) { await transaction.rollback(); return res.status(400).json({ error: `Not enough ${effort.resource}` }); }
+
+    city.resources[effort.resource] -= amount;
+    city.changed('resources', true);
+    await city.save({ transaction });
+
+    const contributors = effort.contributors || {};
+    const prev = contributors[req.user.id] ? contributors[req.user.id].amount : 0;
+    contributors[req.user.id] = { username: req.user.username, amount: prev + amount };
+    effort.contributors = contributors;
+    effort.contributed = Math.min(effort.goal, effort.contributed + amount);
+    effort.changed('contributors', true);
+
+    let completed = false;
+    if (effort.contributed >= effort.goal) { effort.status = 'completed'; completed = true; }
+    await effort.save({ transaction });
+
+    let buffEvent = null;
+    if (completed) {
+      buffEvent = await WorldEvent.create({
+        worldId: effort.worldId, type: 'festival',
+        title: 'Relief Fund Delivered 🎉',
+        description: `The realm met the ${effort.title} goal! Production and morale rise across all cities.`,
+        effects: { allProduction: 1.1, happinessModifier: 10 },
+        affectedCityId: null, startsAt: new Date(), endsAt: new Date(Date.now() + 6 * 60 * 60 * 1000), active: true
+      }, { transaction });
+    }
+
+    await transaction.commit();
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`world-${effort.worldId}`).emit('war-effort', { id: effort.id, contributed: effort.contributed, goal: effort.goal, status: effort.status });
+      if (completed && buffEvent) {
+        io.to(`world-${effort.worldId}`).emit('world-event', {
+          id: buffEvent.id, type: 'festival', title: buffEvent.title,
+          description: buffEvent.description, effects: buffEvent.effects, endsAt: buffEvent.endsAt
+        });
+      }
+    }
+
+    res.json({ success: true, contributed: effort.contributed, goal: effort.goal, completed });
+  } catch (e) {
+    try { await transaction.rollback(); } catch (_) { /* already rolled back */ }
+    console.error('Error donating to war effort:', e);
+    res.status(500).json({ error: 'Failed to donate' });
   }
 });
 

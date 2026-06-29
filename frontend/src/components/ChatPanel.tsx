@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import api from '../config/api';
 import { MessageCircle, Send, X, Minimize2, Maximize2 } from 'lucide-react';
+import OnlineDot from './OnlineDot';
 import './ChatPanel.css';
 
 interface ChatMessage {
@@ -16,7 +17,7 @@ interface ChatMessage {
 
 const ChatPanel: React.FC = () => {
   const { user } = useAuth();
-  const { socket } = useGame();
+  const { socket, onlineUsers } = useGame();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -98,6 +99,9 @@ const ChatPanel: React.FC = () => {
               >
                 Global
               </button>
+              <span className="chat-online-count" title="Settlers online now">
+                🟢 {onlineUsers.size}
+              </span>
             </div>
             <div className="chat-controls">
               <button onClick={() => setIsMinimized(!isMinimized)}>
@@ -115,6 +119,7 @@ const ChatPanel: React.FC = () => {
                 {messages.map(msg => (
                   <div key={msg.id} className={`chat-msg ${msg.senderId === user.id ? 'own' : ''}`}>
                     <span className="chat-msg-sender">
+                      <OnlineDot userId={msg.senderId} showOffline={false} />
                       {msg.sender?.username || 'Unknown'} <small>Lv.{msg.sender?.level}</small>
                     </span>
                     <span className="chat-msg-text">{msg.content}</span>

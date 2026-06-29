@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { ArrowLeft, MapPin, Users, Crown, ZoomIn, ZoomOut, Crosshair } from 'lucide-react';
 import './WorldMap.css';
+import AttackModal from '../components/AttackModal';
 
 interface WorldCity {
   id: string;
@@ -30,6 +31,7 @@ const WorldMap: React.FC = () => {
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [selectedCity, setSelectedCity] = useState<WorldCity | null>(null);
+  const [attackOpen, setAttackOpen] = useState(false);
   const [filter, setFilter] = useState('');
   const mapRef = useRef<HTMLDivElement>(null);
 
@@ -99,6 +101,7 @@ const WorldMap: React.FC = () => {
     : cities;
 
   const uniqueOwners = new Set(cities.map(c => c.owner.username)).size;
+  const myCities = cities.filter(c => c.userId === user?.id).map(c => ({ id: c.id, name: c.name }));
 
   return (
     <div className="world-map-page">
@@ -193,9 +196,13 @@ const WorldMap: React.FC = () => {
               <p><strong>Owner:</strong> {selectedCity.owner.username} (Lv.{selectedCity.owner.level})</p>
               <p><strong>Population:</strong> {selectedCity.population.toLocaleString()}</p>
               <p><strong>Location:</strong> ({selectedCity.x}, {selectedCity.y})</p>
-              {selectedCity.userId === user?.id && (
+              {selectedCity.userId === user?.id ? (
                 <button className="btn-primary" onClick={() => navigate(`/city/${selectedCity.id}`)}>
                   Manage City
+                </button>
+              ) : myCities.length > 0 && (
+                <button className="btn-primary" onClick={() => setAttackOpen(true)}>
+                  ⚔️ Attack
                 </button>
               )}
               <button className="btn-close" onClick={() => setSelectedCity(null)}>Close</button>
@@ -242,6 +249,13 @@ const WorldMap: React.FC = () => {
           </table>
         </div>
       )}
+
+      <AttackModal
+        isOpen={attackOpen}
+        onClose={() => { setAttackOpen(false); fetchWorldCities(); }}
+        defender={selectedCity ? { id: selectedCity.id, name: selectedCity.name } : null}
+        myCities={myCities}
+      />
     </div>
   );
 };

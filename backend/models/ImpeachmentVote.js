@@ -48,6 +48,11 @@ const ImpeachmentVote = sequelize.define('ImpeachmentVote', {
   },
   resolvedAt: {
     type: DataTypes.DATE
+  },
+  // Per-user vote ledger {userId: bool} — prevents one account passing it alone.
+  voters: {
+    type: DataTypes.JSONB,
+    defaultValue: {}
   }
 }, {
   tableName: 'impeachment_votes',

@@ -91,6 +91,13 @@
   font-weight: 700;
   font-size: 14px;
   margin-left: auto;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+/* Green pulse when a fresh server tick increases this resource */
+.city-res-flash {
+  color: #68d391;
+  text-shadow: 0 0 8px rgba(104, 211, 145, 0.8);
 }
 
 .city-res-prod {

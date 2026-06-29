@@ -7,6 +7,19 @@ class NotificationService {
 
   async send(userId, type, title, message, data = {}) {
     try {
+      // Guard against invalid ENUM types: previously these threw inside create()
+      // and the error was swallowed, silently dropping notifications (e.g. the
+      // 'BATTLE' attack alarm). Fail loud instead of silent.
+      const VALID_TYPES = [
+        'ELECTION_NEW', 'ELECTION_RESULT', 'MARKET_SOLD', 'MARKET_BOUGHT',
+        'BATTLE_ATTACK', 'BATTLE_DEFENSE', 'CITY_PRODUCTION', 'CITY_HAPPINESS',
+        'LEVEL_UP', 'SYSTEM'
+      ];
+      if (!VALID_TYPES.includes(type)) {
+        console.error(`notificationService: invalid notification type "${type}" (user ${userId}) — not sent`);
+        return null;
+      }
+
       const notification = await Notification.create({
         userId, type, title, message, data
       });
@@ -25,7 +38,7 @@ class NotificationService {
 
       return notification;
     } catch (error) {
-      console.error('Error sending notification:', error);
+      console.error(`Error sending notification (type=${type}, user=${userId}):`, error.message);
     }
   }
 

@@ -5,6 +5,7 @@ const { authenticate } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
 const { logActivity } = require('./activity');
+const { bumpQuests } = require('../services/questService');
 
 const router = express.Router();
 
@@ -184,7 +185,9 @@ router.get('/:id', authenticate, async (req, res) => {
       return res.json({ city: publicCity });
     }
 
-    res.json({ city });
+    const cityJson = city.toJSON();
+    cityJson.storageCap = 10000 + (city.buildings?.houses || 0) * 2000 + (city.buildings?.townHall || 0) * 10000;
+    res.json({ city: cityJson });
   } catch (error) {
     console.error('Error fetching city:', error);
     res.status(500).json({ error: 'Failed to fetch city' });
@@ -255,8 +258,10 @@ router.put('/:id/build', [
       resources: city.resources,
       buildings: city.buildings
     });
-    
-    res.json({ 
+
+    bumpQuests(req.user.id, 'build', building, quantity, io);
+
+    res.json({
       message: 'Building constructed successfully',
       city: {
         resources: city.resources,
@@ -282,17 +287,17 @@ router.post('/:id/update-production', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'City not found or unauthorized' });
     }
     
-    city.updateResources();
-    await city.save();
-    
-    // Round resource values to avoid float precision issues
+    // Accrual is owned by the game scheduler (per-hour rates applied each tick).
+    // This endpoint NO LONGER mints resources — doing so double-counted with the
+    // scheduler and let a client mint by spamming it. It now returns a snapshot.
     const roundedResources = {};
     for (const [key, val] of Object.entries(city.resources)) {
       roundedResources[key] = Math.round(val * 100) / 100;
     }
     res.json({
-      message: 'Production updated',
+      message: 'Snapshot',
       resources: roundedResources,
+      production: city.production,
       population: city.population
     });
   } catch (error) {

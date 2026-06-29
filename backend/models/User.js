@@ -83,6 +83,11 @@ const User = sequelize.define('User', {
   protectedUntil: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  // NPC actor flag (pirate cove owner, etc.) — excluded from leaderboard & elections.
+  isBot: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 }, {
   hooks: {

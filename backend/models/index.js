@@ -28,6 +28,10 @@ const Contract = require('./Contract');
 const Loan = require('./Loan');
 const Achievement = require('./Achievement');
 const ActivityLog = require('./ActivityLog');
+const PirateRaid = require('./PirateRaid');
+const MarketTrade = require('./MarketTrade');
+const WorldBoss = require('./WorldBoss');
+const WarEffort = require('./WarEffort');
 
 // Original relationships
 User.hasMany(City, { foreignKey: 'userId', as: 'cities' });
@@ -143,5 +147,9 @@ module.exports = {
   Contract,
   Loan,
   Achievement,
-  ActivityLog
+  ActivityLog,
+  PirateRaid,
+  MarketTrade,
+  WorldBoss,
+  WarEffort
 };

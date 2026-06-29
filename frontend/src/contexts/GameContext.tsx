@@ -21,6 +21,7 @@ interface GameContextType {
   cities: City[];
   selectedCity: City | null;
   socket: Socket | null;
+  onlineUsers: Set<string>;
   loading: boolean;
   fetchCities: () => Promise<void>;
   selectCity: (city: City) => void;
@@ -43,20 +44,43 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [cities, setCities] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      // For relative URLs (/api), connect socket to current origin; for absolute, strip /api
-      const wsUrl = apiUrl.startsWith('/') ? window.location.origin : apiUrl.replace('/api', '');
+      const isRelative = apiUrl.startsWith('/');
+      // For relative URLs (/api or /republica/api), connect socket to current origin;
+      // for absolute, strip /api
+      const wsUrl = isRelative ? window.location.origin : apiUrl.replace('/api', '');
+      // When served under a base path (e.g. /republica/api), the socket.io endpoint
+      // lives under the same prefix (/republica/socket.io). Empty prefix -> default.
+      const basePath = isRelative ? apiUrl.replace(/\/api$/, '') : '';
       const newSocket = io(wsUrl, {
+        path: `${basePath}/socket.io`,
         transports: ['websocket', 'polling'],
       });
 
       newSocket.on('connect', () => {
         console.log('Connected to server');
+        // join-world first so the server can attribute presence to the right world,
+        // then join-user to receive personal notifications and broadcast presence
         newSocket.emit('join-world', user.worldId);
+        newSocket.emit('join-user', user.id);
+      });
+
+      newSocket.on('presence-snapshot', (data: { online: string[] }) => {
+        setOnlineUsers(new Set(data.online));
+      });
+
+      newSocket.on('presence-update', (data: { userId: string; online: boolean }) => {
+        setOnlineUsers(prev => {
+          const next = new Set(prev);
+          if (data.online) next.add(data.userId);
+          else next.delete(data.userId);
+          return next;
+        });
       });
 
       newSocket.on('city-updated', (data) => {
@@ -85,6 +109,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // Keep the socket joined to the SELECTED city's room — on first selection, on
+  // city switch, and after every (re)connect. The scheduler emits
+  // 'production-update' only to `city-<id>` (scheduler.js), so without a reliable
+  // join the resource bar freezes until a manual refresh (F5). socket.io drops
+  // room membership on reconnect (new socket id), hence the re-join on 'connect'.
+  useEffect(() => {
+    if (!socket || !selectedCity) return;
+    const joinCityRoom = () => socket.emit('join-city', selectedCity.id);
+    joinCityRoom();
+    socket.on('connect', joinCityRoom);
+    return () => { socket.off('connect', joinCityRoom); };
+  }, [socket, selectedCity]);
 
   const fetchCities = async () => {
     setLoading(true);
@@ -145,6 +182,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         cities,
         selectedCity,
         socket,
+        onlineUsers,
         loading,
         fetchCities,
         selectCity,

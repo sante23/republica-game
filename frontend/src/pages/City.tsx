@@ -4,6 +4,7 @@ import api from '../config/api';
 import { ArrowLeft, Users, Beaker, Home, Wheat, TreePine, Mountain, Pickaxe, Store, Shield, Castle, FlaskConical } from 'lucide-react';
 import CountdownTimer from '../components/CountdownTimer';
 import { useGame } from '../contexts/GameContext';
+import { useTickingResources } from '../hooks/useTickingResources';
 import { playSound } from '../utils/sounds';
 import './City.css';
 
@@ -52,7 +53,7 @@ const RESOURCE_COLORS: Record<string, string> = {
 const City: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { updateCityResources } = useGame();
+  const { updateCityResources, socket } = useGame();
   const [city, setCity] = useState<CityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [building, setBuilding] = useState(false);
@@ -61,13 +62,35 @@ const City: React.FC = () => {
   const [showResearch, setShowResearch] = useState(false);
   const [researchingTech, setResearchingTech] = useState<string | null>(null);
 
+  // Live-ticking resource amounts between server updates
+  const { display: liveRes, flash } = useTickingResources(city?.resources, city?.production);
+
   useEffect(() => {
     fetchCity();
     fetchResearch();
-    const interval = setInterval(updateProduction, 30000);
+    // Slow reconcile only — real-time motion now comes from the socket + client ticking
+    const interval = setInterval(updateProduction, 60000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Snap to server truth the instant the production tick fires for this city
+  useEffect(() => {
+    if (!socket || !id) return;
+    socket.emit('join-city', id);
+    const handler = (data: any) => {
+      if (data.cityId !== id) return;
+      setCity(prev => prev ? {
+        ...prev,
+        resources: data.resources ?? prev.resources,
+        production: data.production ?? prev.production,
+        population: data.population ?? prev.population,
+        happiness: data.happiness ?? prev.happiness,
+      } : prev);
+    };
+    socket.on('production-update', handler);
+    return () => { socket.off('production-update', handler); };
+  }, [socket, id]);
 
   const fetchCity = async () => {
     try {
@@ -243,7 +266,9 @@ const City: React.FC = () => {
           <div className="city-res-item" key={res}>
             <span className="city-res-dot" style={{ background: RESOURCE_COLORS[res] }} />
             <span className="city-res-name">{res.charAt(0).toUpperCase() + res.slice(1)}</span>
-            <span className="city-res-amount">{Math.floor(city.resources[res] || 0).toLocaleString()}</span>
+            <span className={`city-res-amount ${flash[res] ? 'city-res-flash' : ''}`}>
+              {Math.floor(liveRes[res] ?? city.resources[res] ?? 0).toLocaleString()}
+            </span>
             <span className="city-res-prod">+{city.production[res] || 0}/h</span>
           </div>
         ))}
