@@ -112,12 +112,18 @@ const City = sequelize.define('City', {
       energy: 3
     }
   },
-  // In-progress building construction (one at a time per city), or null.
-  // Shape: { building, quantity, startedAt, completesAt }
+  // Legacy single-construction field (migrated into buildQueue on next tick).
   construction: {
     type: DataTypes.JSONB,
     allowNull: true,
     defaultValue: null
+  },
+  // Construction queue (max 3). Item 0 is active (has completesAt); the rest are
+  // pending. Shape: [{ building, quantity, seconds, startedAt?, completesAt? }]
+  buildQueue: {
+    type: DataTypes.JSONB,
+    allowNull: false,
+    defaultValue: []
   }
 }, {
   indexes: [

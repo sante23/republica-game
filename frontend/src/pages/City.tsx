@@ -9,11 +9,12 @@ import { useTickingResources } from '../hooks/useTickingResources';
 import { playSound } from '../utils/sounds';
 import './City.css';
 
-interface Construction {
+interface ConstructionItem {
   building: string;
   quantity?: number;
-  startedAt: string;
-  completesAt: string;
+  seconds?: number;
+  startedAt?: string;
+  completesAt?: string;
 }
 
 interface CityData {
@@ -24,8 +25,11 @@ interface CityData {
   resources: Record<string, number>;
   buildings: Record<string, number>;
   production: Record<string, number>;
-  construction?: Construction | null;
+  buildQueue?: ConstructionItem[];
 }
+
+const MAX_QUEUE = 3;
+const fmtTime = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`);
 
 interface TechInfo {
   name: string;
@@ -104,7 +108,7 @@ const City: React.FC = () => {
         ...prev,
         resources: data.resources ?? prev.resources,
         buildings: data.buildings ?? prev.buildings,
-        construction: data.construction !== undefined ? data.construction : prev.construction,
+        buildQueue: data.buildQueue !== undefined ? data.buildQueue : prev.buildQueue,
       } : prev);
     };
     socket.on('production-update', handler);
@@ -164,12 +168,12 @@ const City: React.FC = () => {
           ...city,
           resources: response.data.city.resources,
           buildings: response.data.city.buildings,
-          construction: response.data.city.construction,
+          buildQueue: response.data.city.buildQueue,
         });
         if (id) updateCityResources(id, response.data.city.resources);
       }
       playSound('build');
-      toast.success('Construction started!');
+      toast.success('Construction queued!');
     } catch (error: any) {
       playSound('error');
       toast.error(error.response?.data?.error || 'Failed to build');
@@ -182,12 +186,32 @@ const City: React.FC = () => {
   // refetch the city only once per finished construction.
   const completedBuildRef = useRef<string | null>(null);
   const onConstructionComplete = () => {
-    const key = city?.construction?.completesAt || '';
+    const key = city?.buildQueue?.[0]?.completesAt || '';
     if (completedBuildRef.current === key) return;
     completedBuildRef.current = key;
     fetchCity();
     playSound('build');
     toast.success('Construction complete!');
+  };
+
+  const cancelBuild = async (index: number) => {
+    try {
+      const res = await api.post(`/cities/${id}/cancel-build`, { index });
+      if (city) {
+        setCity({
+          ...city,
+          resources: res.data.city.resources,
+          buildings: res.data.city.buildings,
+          buildQueue: res.data.city.buildQueue,
+        });
+        if (id) updateCityResources(id, res.data.city.resources);
+      }
+      const refund = res.data.refund || {};
+      const parts = Object.entries(refund).filter(([, v]) => (v as number) > 0).map(([k, v]) => `${v} ${k}`).join(', ');
+      toast.info(`Construction canceled${parts ? ` · refunded ${parts}` : ''}`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to cancel');
+    }
   };
 
   const startResearch = async (techId: string) => {
@@ -315,6 +339,25 @@ const City: React.FC = () => {
       {/* Facilities - OGame style */}
       <section className="facilities-panel">
         <h2>Buildings &amp; Infrastructure</h2>
+
+        {city.buildQueue && city.buildQueue.length > 0 && (
+          <div className="build-queue" style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>🏗️ Build Queue ({city.buildQueue.length}/{MAX_QUEUE})</div>
+            {city.buildQueue.map((q, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderTop: i ? '1px solid #edf2f7' : 'none' }}>
+                <span style={{ minWidth: 18, color: '#718096', fontSize: 13 }}>{i + 1}.</span>
+                <span style={{ flex: 1, fontSize: 13 }}>{BUILDINGS[q.building]?.name || q.building}</span>
+                {i === 0 && q.completesAt ? (
+                  <CountdownTimer targetDate={q.completesAt} startDate={q.startedAt} showProgress onComplete={onConstructionComplete} label="Building" />
+                ) : (
+                  <span style={{ fontSize: 12, color: '#a0aec0' }}>queued · ~{fmtTime(q.seconds || 0)}</span>
+                )}
+                <button onClick={() => cancelBuild(i)} title="Cancel construction (50% refund)" style={{ background: 'none', border: '1px solid #fc8181', color: '#e53e3e', borderRadius: 6, cursor: 'pointer', padding: '2px 8px', fontSize: 12 }}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="facilities-list">
           {/* Town Hall - always first */}
           <div className="facility-row facility-townhall">
@@ -333,11 +376,15 @@ const City: React.FC = () => {
           {Object.entries(BUILDINGS).map(([key, def]) => {
             const count = city.buildings[key] || 0;
             const currentProd = getCurrentProduction(key);
-            const anyConstruction = !!city.construction;
-            const isBuildingThis = city.construction?.building === key;
-            // Mirror of the backend formula: 30s * (currentLevel + 1).
-            const buildSecs = 30 * (count + 1);
-            const buildTimeLabel = buildSecs >= 60 ? `${Math.round(buildSecs / 60)}m` : `${buildSecs}s`;
+            const queue = city.buildQueue || [];
+            const queueFull = queue.length >= MAX_QUEUE;
+            const queuedSame = queue.filter(q => q.building === key).length;
+            // Mirror of the backend formula: 30*(level+1)/speed, where level counts
+            // same-type items already queued and speed grows with houses.
+            const houses = city.buildings.houses || 0;
+            const speed = 1 + Math.min(1, houses * 0.02);
+            const buildSecs = Math.max(5, Math.round((30 * (count + queuedSame + 1)) / speed));
+            const buildTimeLabel = fmtTime(buildSecs);
 
             return (
               <div className={`facility-row ${count > 0 ? 'facility-active' : ''}`} key={key}>
@@ -359,25 +406,17 @@ const City: React.FC = () => {
                 </div>
                 <div className="facility-action">
                   <div className="facility-cost">{def.cost}</div>
-                  <div className="facility-buildtime" style={{ fontSize: 11, color: '#718096', marginBottom: 4 }}>⏱ {buildTimeLabel}</div>
-                  {isBuildingThis && city.construction ? (
-                    <CountdownTimer
-                      targetDate={city.construction.completesAt}
-                      startDate={city.construction.startedAt}
-                      showProgress
-                      label="Building"
-                      onComplete={onConstructionComplete}
-                    />
-                  ) : (
-                    <button
-                      onClick={() => buildStructure(key)}
-                      disabled={building || anyConstruction}
-                      className="facility-build-btn"
-                      title={anyConstruction ? 'Another building is under construction' : undefined}
-                    >
-                      {anyConstruction ? 'Busy' : 'Build'}
-                    </button>
-                  )}
+                  <div className="facility-buildtime" style={{ fontSize: 11, color: '#718096', marginBottom: 4 }}>
+                    ⏱ {buildTimeLabel}{queuedSame > 0 ? ` · queued: ${queuedSame}` : ''}
+                  </div>
+                  <button
+                    onClick={() => buildStructure(key)}
+                    disabled={building || queueFull}
+                    className="facility-build-btn"
+                    title={queueFull ? `Build queue full (${MAX_QUEUE})` : undefined}
+                  >
+                    {queueFull ? 'Queue full' : 'Build'}
+                  </button>
                 </div>
               </div>
             );
