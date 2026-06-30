@@ -6,6 +6,7 @@ const { body, validationResult } = require('express-validator');
 
 const { logActivity } = require('./activity');
 const { bumpQuests } = require('../services/questService');
+const { buildSeconds, completeConstruction } = require('../services/construction');
 
 const router = express.Router();
 
@@ -31,6 +32,12 @@ router.get('/my', authenticate, async (req, res) => {
         attributes: ['username', 'level']
       }]
     });
+
+    // Finish any constructions whose timers elapsed.
+    for (const c of cities) {
+      const done = completeConstruction(c);
+      if (done) { await c.save(); bumpQuests(req.user.id, 'build', done, 1, req.app.get('io')); }
+    }
 
     const cleaned = cities.map(c => { const j = c.toJSON(); roundResources(j); return j; });
     res.json({ cities: cleaned });
@@ -171,6 +178,17 @@ router.get('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'City not found' });
     }
 
+    // Owner-only: finish any construction whose timer elapsed before returning.
+    if (city.userId === req.user.id) {
+      const done = completeConstruction(city);
+      if (done) {
+        await city.save();
+        const io = req.app.get('io');
+        if (io) io.to(`city-${city.id}`).emit('city-updated', { resources: city.resources, buildings: city.buildings, construction: null });
+        bumpQuests(req.user.id, 'build', done, 1, io);
+      }
+    }
+
     // Hide sensitive data for non-owners
     if (city.userId !== req.user.id) {
       const publicCity = {
@@ -217,7 +235,21 @@ router.put('/:id/build', [
     if (!city) {
       return res.status(404).json({ error: 'City not found or unauthorized' });
     }
-    
+
+    // If a previous construction has finished, apply it now (frees the build slot).
+    const justFinished = completeConstruction(city);
+    if (justFinished) {
+      await city.save();
+      bumpQuests(req.user.id, 'build', justFinished, 1, req.app.get('io'));
+    }
+    // Only one construction at a time per city.
+    if (city.construction) {
+      return res.status(400).json({
+        error: `Already building ${city.construction.building}. Wait for it to finish.`,
+        construction: city.construction
+      });
+    }
+
     const buildingCosts = {
       houses: { wood: 50, stone: 25, gold: 10 },
       farms: { wood: 100, gold: 20 },
@@ -246,26 +278,36 @@ router.put('/:id/build', [
     for (const [resource, amount] of Object.entries(cost)) {
       city.resources[resource] -= amount * quantity;
     }
-    
-    city.buildings[building] = (city.buildings[building] || 0) + quantity;
-    
+
+    // Start a timed, incremental construction instead of building instantly.
+    // Resources are spent now; the building is added when the timer elapses.
+    const level = city.buildings[building] || 0;
+    const seconds = buildSeconds(level);
+    const now = new Date();
+    city.construction = {
+      building,
+      quantity,
+      startedAt: now.toISOString(),
+      completesAt: new Date(now.getTime() + seconds * 1000).toISOString()
+    };
+
     city.changed('resources', true);
-    city.changed('buildings', true);
+    city.changed('construction', true);
     await city.save();
-    
+
     const io = req.app.get('io');
     io.to(`city-${city.id}`).emit('city-updated', {
       resources: city.resources,
-      buildings: city.buildings
+      buildings: city.buildings,
+      construction: city.construction
     });
 
-    bumpQuests(req.user.id, 'build', building, quantity, io);
-
     res.json({
-      message: 'Building constructed successfully',
+      message: 'Construction started',
       city: {
         resources: city.resources,
-        buildings: city.buildings
+        buildings: city.buildings,
+        construction: city.construction
       }
     });
   } catch (error) {

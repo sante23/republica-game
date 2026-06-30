@@ -113,10 +113,19 @@ router.post('/start', authenticate, async (req, res) => {
 
     await city.update({ resources: newResources }, { transaction });
 
+    // Incremental research time: each technology already completed in this city
+    // makes the next one take longer (+15% per completed tech), on top of the
+    // per-tier base time.
+    const completedCount = await Research.count({
+      where: { cityId, status: 'completed' },
+      transaction
+    });
+    const effectiveSeconds = Math.round(tech.time * (1 + 0.15 * completedCount));
+
     const research = await Research.create({
       cityId,
       techId,
-      completesAt: new Date(Date.now() + tech.time * 1000)
+      completesAt: new Date(Date.now() + effectiveSeconds * 1000)
     }, { transaction });
 
     await transaction.commit();
