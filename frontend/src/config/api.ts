@@ -22,7 +22,13 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Respect the app's base path (/republica in production) — a bare '/login'
+      // redirect lands outside the SPA and 404s. Skip if already on the login page
+      // to avoid a reload loop.
+      const loginPath = `${process.env.PUBLIC_URL || ''}/login`;
+      if (!window.location.pathname.endsWith('/login')) {
+        window.location.href = loginPath;
+      }
     }
     return Promise.reject(error);
   }
