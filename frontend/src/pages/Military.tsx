@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
 import { Sword, Target, Users } from 'lucide-react';
 import CrisisPanel from '../components/CrisisPanel';
@@ -38,6 +39,7 @@ const UNIT_TYPES = {
 
 const Military: React.FC = () => {
   const { cities, fetchCities } = useGame();
+  const toast = useToast();
   const [selectedCity, setSelectedCity] = useState<any>(null);
   const [units, setUnits] = useState<any[]>([]);
   const [battles, setBattles] = useState<any[]>([]);
@@ -98,7 +100,7 @@ const Military: React.FC = () => {
 
   const trainUnits = async (unitType: string, quantity: number) => {
     if (!selectedCity) {
-      alert('You need a city first. Go to Home and found your city, then come back to train troops.');
+      toast.warning('You need a city first. Go to Home and found your city, then come back to train troops.');
       return;
     }
     setLoading(true);
@@ -108,10 +110,10 @@ const Military: React.FC = () => {
         unitType,
         quantity
       });
-      alert(`Successfully trained ${quantity} ${UNIT_TYPES[unitType as keyof typeof UNIT_TYPES].name}!`);
+      toast.success(`Trained ${quantity} ${UNIT_TYPES[unitType as keyof typeof UNIT_TYPES].name}!`);
       fetchUnits();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to train units');
+      toast.error(error.response?.data?.error || 'Failed to train units');
     } finally {
       setLoading(false);
     }

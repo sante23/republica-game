@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
 import { ArrowLeft, Landmark, CreditCard, AlertTriangle } from 'lucide-react';
 import './Banking.css';
@@ -28,6 +29,7 @@ const Banking: React.FC = () => {
   const [loanAmount, setLoanAmount] = useState(1000);
   const [repayAmount, setRepayAmount] = useState(0);
   const [repayingId, setRepayingId] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => { fetchLoans(); }, []);
 
@@ -46,9 +48,9 @@ const Banking: React.FC = () => {
     try {
       await api.post('/banking/world-bank', { amount: loanAmount });
       await fetchLoans();
-      alert(`Loan of ${loanAmount} credits approved!`);
+      toast.success(`Loan of ${loanAmount} credits approved!`);
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to request loan');
+      toast.error(err.response?.data?.error || 'Failed to request loan');
     }
   };
 
@@ -60,7 +62,7 @@ const Banking: React.FC = () => {
       setRepayAmount(0);
       await fetchLoans();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to repay');
+      toast.error(err.response?.data?.error || 'Failed to repay');
     }
   };
 

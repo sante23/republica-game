@@ -34,7 +34,7 @@ const Navbar: React.FC = () => {
     // Direct link to the player's city (build/upgrade mines, farms, etc.).
     // Without this the city screen is only reachable by clicking a card on the Dashboard.
     ...(displayCity ? [{ path: `/city/${displayCity.id}`, icon: <Building2 size={18} />, label: "City" }] : []),
-    { path: "/market", icon: <ShoppingCart size={18} />, label: "Market" },
+    { path: "/market", icon: <ShoppingCart size={18} />, label: "Trade" },
     { path: "/military", icon: <Sword size={18} />, label: "Military" },
     { path: "/economy", icon: <BarChart3 size={18} />, label: "Economy" },
     { path: "/politics", icon: <Vote size={18} />, label: "Politics" },
@@ -69,8 +69,8 @@ const Navbar: React.FC = () => {
             <span className="online-count-dot" /> {onlineUsers.size} online
           </span>
           <NotificationBell />
-          <Link to="/profile" className="user-info">
-            Lv.{user.level} | {user.credits} G
+          <Link to="/profile" className="user-info" title="Crediti — portafoglio globale dell'account (diverso dall'Oro della città)">
+            Lv.{user.level} | {user.credits.toLocaleString()} Cr
           </Link>
           <button className="logout-btn" onClick={logout}>
             <LogOut size={16} />
