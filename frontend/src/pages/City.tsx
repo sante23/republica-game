@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { ArrowLeft, Users, Beaker, Home, Wheat, TreePine, Mountain, Pickaxe, Store, Shield, Castle, FlaskConical } from 'lucide-react';
@@ -9,6 +9,13 @@ import { useTickingResources } from '../hooks/useTickingResources';
 import { playSound } from '../utils/sounds';
 import './City.css';
 
+interface Construction {
+  building: string;
+  quantity?: number;
+  startedAt: string;
+  completesAt: string;
+}
+
 interface CityData {
   id: string;
   name: string;
@@ -17,6 +24,7 @@ interface CityData {
   resources: Record<string, number>;
   buildings: Record<string, number>;
   production: Record<string, number>;
+  construction?: Construction | null;
 }
 
 interface TechInfo {
@@ -90,8 +98,21 @@ const City: React.FC = () => {
         happiness: data.happiness ?? prev.happiness,
       } : prev);
     };
+    // city-updated is emitted to this city's room on build start/completion
+    const cityUpdatedHandler = (data: any) => {
+      setCity(prev => prev ? {
+        ...prev,
+        resources: data.resources ?? prev.resources,
+        buildings: data.buildings ?? prev.buildings,
+        construction: data.construction !== undefined ? data.construction : prev.construction,
+      } : prev);
+    };
     socket.on('production-update', handler);
-    return () => { socket.off('production-update', handler); };
+    socket.on('city-updated', cityUpdatedHandler);
+    return () => {
+      socket.off('production-update', handler);
+      socket.off('city-updated', cityUpdatedHandler);
+    };
   }, [socket, id]);
 
   const fetchCity = async () => {
@@ -143,17 +164,30 @@ const City: React.FC = () => {
           ...city,
           resources: response.data.city.resources,
           buildings: response.data.city.buildings,
+          construction: response.data.city.construction,
         });
         if (id) updateCityResources(id, response.data.city.resources);
       }
       playSound('build');
-      toast.success('Built successfully!');
+      toast.success('Construction started!');
     } catch (error: any) {
       playSound('error');
       toast.error(error.response?.data?.error || 'Failed to build');
     } finally {
       setBuilding(false);
     }
+  };
+
+  // The CountdownTimer calls onComplete every second once elapsed; guard so we
+  // refetch the city only once per finished construction.
+  const completedBuildRef = useRef<string | null>(null);
+  const onConstructionComplete = () => {
+    const key = city?.construction?.completesAt || '';
+    if (completedBuildRef.current === key) return;
+    completedBuildRef.current = key;
+    fetchCity();
+    playSound('build');
+    toast.success('Construction complete!');
   };
 
   const startResearch = async (techId: string) => {
@@ -299,6 +333,11 @@ const City: React.FC = () => {
           {Object.entries(BUILDINGS).map(([key, def]) => {
             const count = city.buildings[key] || 0;
             const currentProd = getCurrentProduction(key);
+            const anyConstruction = !!city.construction;
+            const isBuildingThis = city.construction?.building === key;
+            // Mirror of the backend formula: 30s * (currentLevel + 1).
+            const buildSecs = 30 * (count + 1);
+            const buildTimeLabel = buildSecs >= 60 ? `${Math.round(buildSecs / 60)}m` : `${buildSecs}s`;
 
             return (
               <div className={`facility-row ${count > 0 ? 'facility-active' : ''}`} key={key}>
@@ -320,13 +359,25 @@ const City: React.FC = () => {
                 </div>
                 <div className="facility-action">
                   <div className="facility-cost">{def.cost}</div>
-                  <button
-                    onClick={() => buildStructure(key)}
-                    disabled={building}
-                    className="facility-build-btn"
-                  >
-                    Build
-                  </button>
+                  <div className="facility-buildtime" style={{ fontSize: 11, color: '#718096', marginBottom: 4 }}>⏱ {buildTimeLabel}</div>
+                  {isBuildingThis && city.construction ? (
+                    <CountdownTimer
+                      targetDate={city.construction.completesAt}
+                      startDate={city.construction.startedAt}
+                      showProgress
+                      label="Building"
+                      onComplete={onConstructionComplete}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => buildStructure(key)}
+                      disabled={building || anyConstruction}
+                      className="facility-build-btn"
+                      title={anyConstruction ? 'Another building is under construction' : undefined}
+                    >
+                      {anyConstruction ? 'Busy' : 'Build'}
+                    </button>
+                  )}
                 </div>
               </div>
             );

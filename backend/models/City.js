@@ -111,6 +111,13 @@ const City = sequelize.define('City', {
       food: 5,
       energy: 3
     }
+  },
+  // In-progress building construction (one at a time per city), or null.
+  // Shape: { building, quantity, startedAt, completesAt }
+  construction: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   indexes: [
