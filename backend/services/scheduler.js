@@ -5,7 +5,7 @@ const sequelize = require('../config/database');
 const { PLATFORMS, PLATFORM_KEYS, NPC_NAMES, PROMISE_LABELS } = require('../config/electionConfig');
 const { computeBattle } = require('./combat');
 const { logActivity } = require('../routes/activity');
-const { completeConstruction } = require('./construction');
+const { advanceQueue } = require('./construction');
 const { bumpQuests } = require('./questService');
 
 // A candidate's total support = player (weighted) votes + synthetic citizen baseline + campaign swing + endorsements.
@@ -155,15 +155,15 @@ class GameScheduler {
 
   async updateCityProduction(city, activeEvents = [], elapsedSec = 60) {
     try {
-      // Finish any construction whose timer elapsed, so its output counts this tick.
-      const builtNow = completeConstruction(city);
-      if (builtNow) {
-        try { bumpQuests(city.userId, 'build', builtNow, 1, this.io); } catch (_) {}
+      // Finish any constructions whose timers elapsed, so output counts this tick.
+      const builtNow = advanceQueue(city);
+      if (builtNow.length) {
+        for (const b of builtNow) { try { bumpQuests(city.userId, 'build', b, 1, this.io); } catch (_) {} }
         if (this.io) {
           this.io.to(`city-${city.id}`).emit('city-updated', {
             resources: city.resources,
             buildings: city.buildings,
-            construction: null
+            buildQueue: city.buildQueue
           });
         }
       }

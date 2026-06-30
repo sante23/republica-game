@@ -120,7 +120,10 @@ router.post('/start', authenticate, async (req, res) => {
       where: { cityId, status: 'completed' },
       transaction
     });
-    const effectiveSeconds = Math.round(tech.time * (1 + 0.15 * completedCount));
+    // More Research Centers research faster: -10% time per center beyond the first.
+    const researchCenters = (city.buildings && city.buildings.researchCenter) || 1;
+    const speed = 1 + 0.1 * Math.max(0, researchCenters - 1);
+    const effectiveSeconds = Math.max(30, Math.round(tech.time * (1 + 0.15 * completedCount) / speed));
 
     const research = await Research.create({
       cityId,
