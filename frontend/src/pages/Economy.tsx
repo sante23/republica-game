@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
 import { TrendingUp, ArrowRightLeft, Settings } from 'lucide-react';
 import './Economy.css';
@@ -11,6 +12,7 @@ const Economy: React.FC = () => {
   const [taxSettings, setTaxSettings] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('routes');
   const [selectedCity, setSelectedCity] = useState<any>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (cities.length > 0 && !selectedCity) {
@@ -70,10 +72,10 @@ const Economy: React.FC = () => {
         resourceType,
         quantityPerHour: parseFloat(quantity)
       });
-      alert('Trade route created!');
+      toast.success('Trade route created!');
       fetchTradeRoutes();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to create trade route');
+      toast.error(error.response?.data?.error || 'Failed to create trade route');
     }
   };
 
@@ -92,10 +94,10 @@ const Economy: React.FC = () => {
         price: parseFloat(price),
         quantity: parseInt(quantity)
       });
-      alert('Auto order created!');
+      toast.success('Auto order created!');
       fetchAutoOrders();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to create auto order');
+      toast.error(error.response?.data?.error || 'Failed to create auto order');
     }
   };
 

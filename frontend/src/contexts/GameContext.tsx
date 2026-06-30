@@ -138,6 +138,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Load the player's cities once on login so the "City" nav link and the
+  // resource top-bar are available on EVERY page, not only on Dashboard/Military
+  // (previously the city menu vanished on World Map, Politics, etc.).
+  useEffect(() => {
+    if (user) fetchCities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const selectCity = (city: City) => {
     setSelectedCity(city);
     if (socket) {

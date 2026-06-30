@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
 import { ArrowLeft, FileText, Check, X } from 'lucide-react';
 import './Contracts.css';
@@ -26,6 +27,7 @@ const Contracts: React.FC = () => {
   const { user } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => { fetchContracts(); }, []);
 
@@ -45,7 +47,7 @@ const Contracts: React.FC = () => {
       await api.post(`/contracts/${contractId}/respond`, { accept });
       await fetchContracts();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed');
+      toast.error(err.response?.data?.error || 'Failed');
     }
   };
 
@@ -55,7 +57,7 @@ const Contracts: React.FC = () => {
       await api.post(`/contracts/${contractId}/cancel`);
       await fetchContracts();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed');
+      toast.error(err.response?.data?.error || 'Failed');
     }
   };
 

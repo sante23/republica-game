@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
 import { Crown, FileText, AlertTriangle, Zap } from 'lucide-react';
 import './Government.css';
@@ -13,6 +14,7 @@ const Government: React.FC = () => {
   const [impeachments, setImpeachments] = useState<any[]>([]);
   const [mayorStatus, setMayorStatus] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('policies');
+  const toast = useToast();
 
   useEffect(() => {
     fetchPolicies();
@@ -65,21 +67,21 @@ const Government: React.FC = () => {
     try {
       if (power === 'boost') {
         await api.post('/governance/mayor/boost', { cityId: cities[0].id });
-        alert('Production boost activated! +10% for 4 hours.');
+        toast.success('Production boost activated! +10% for 4 hours.');
       } else if (power === 'tax') {
         const rate = prompt('Set new tax rate (0-50):');
         if (rate === null) return;
         await api.post('/governance/mayor/tax', { cityId: cities[0].id, taxRate: parseInt(rate) });
-        alert(`Tax rate set to ${rate}%`);
+        toast.success(`Tax rate set to ${rate}%`);
       } else if (power === 'ban') {
         const username = prompt('Enter player username to ban from local market (12h):');
         if (!username) return;
         await api.post('/governance/mayor/ban', { cityId: cities[0].id, targetUsername: username });
-        alert(`${username} banned from local market for 12 hours.`);
+        toast.success(`${username} banned from local market for 12 hours.`);
       }
       fetchMayorStatus(cities[0].id);
     } catch (error: any) {
-      alert(error.response?.data?.error || `Failed to use ${power} power`);
+      toast.error(error.response?.data?.error || `Failed to use ${power} power`);
     }
   };
 
@@ -97,10 +99,10 @@ const Government: React.FC = () => {
         policyType,
         effects: {}
       });
-      alert('Policy proposed!');
+      toast.success('Policy proposed!');
       fetchPolicies();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to propose policy');
+      toast.error(error.response?.data?.error || 'Failed to propose policy');
     }
   };
 
@@ -109,10 +111,10 @@ const Government: React.FC = () => {
       await api.post(`/governance/policies/${policyId}/vote`, {
         vote
       });
-      alert('Vote recorded!');
+      toast.success('Vote recorded!');
       fetchPolicies();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to vote');
+      toast.error(error.response?.data?.error || 'Failed to vote');
     }
   };
 

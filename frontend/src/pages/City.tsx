@@ -4,6 +4,7 @@ import api from '../config/api';
 import { ArrowLeft, Users, Beaker, Home, Wheat, TreePine, Mountain, Pickaxe, Store, Shield, Castle, FlaskConical } from 'lucide-react';
 import CountdownTimer from '../components/CountdownTimer';
 import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import { useTickingResources } from '../hooks/useTickingResources';
 import { playSound } from '../utils/sounds';
 import './City.css';
@@ -54,6 +55,7 @@ const City: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { updateCityResources, socket } = useGame();
+  const toast = useToast();
   const [city, setCity] = useState<CityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [building, setBuilding] = useState(false);
@@ -145,9 +147,10 @@ const City: React.FC = () => {
         if (id) updateCityResources(id, response.data.city.resources);
       }
       playSound('build');
+      toast.success('Built successfully!');
     } catch (error: any) {
       playSound('error');
-      alert(error.response?.data?.error || 'Failed to build');
+      toast.error(error.response?.data?.error || 'Failed to build');
     } finally {
       setBuilding(false);
     }
@@ -160,9 +163,10 @@ const City: React.FC = () => {
       await fetchResearch();
       await fetchCity();
       playSound('research');
+      toast.success('Research started!');
     } catch (error: any) {
       playSound('error');
-      alert(error.response?.data?.error || 'Failed to start research');
+      toast.error(error.response?.data?.error || 'Failed to start research');
     } finally {
       setResearchingTech(null);
     }
@@ -276,7 +280,7 @@ const City: React.FC = () => {
 
       {/* Facilities - OGame style */}
       <section className="facilities-panel">
-        <h2>Facilities</h2>
+        <h2>Buildings &amp; Infrastructure</h2>
         <div className="facilities-list">
           {/* Town Hall - always first */}
           <div className="facility-row facility-townhall">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../config/api';
 import { Store } from 'lucide-react';
 import './NpcMerchant.css';
@@ -17,6 +18,7 @@ const NpcMerchant: React.FC = () => {
   const [prices, setPrices] = useState<Prices>({});
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   const city = selectedCity || (cities.length > 0 ? cities[0] : null);
 
@@ -34,9 +36,9 @@ const NpcMerchant: React.FC = () => {
         resource,
         quantity: qty
       });
-      alert(response.data.message);
+      toast.success(response.data.message);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Trade failed');
+      toast.error(error.response?.data?.error || 'Trade failed');
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../config/api';
+import { useToast } from '../contexts/ToastContext';
 import { Target, Gift, CheckCircle } from 'lucide-react';
 import './DailyQuests.css';
 
@@ -18,6 +19,7 @@ interface Quest {
 const DailyQuests: React.FC = () => {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => {
     fetchQuests();
@@ -41,7 +43,7 @@ const DailyQuests: React.FC = () => {
       await api.post(`/quests/claim/${questId}`);
       fetchQuests();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to claim reward');
+      toast.error(error.response?.data?.error || 'Failed to claim reward');
     }
   };
 

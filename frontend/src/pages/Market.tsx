@@ -100,6 +100,10 @@ const Market: React.FC = () => {
         </button>
       </header>
 
+      <p className="market-hint" style={{ margin: '0 0 16px', color: '#718096', fontSize: 13 }}>
+        💡 This is the <strong>trading</strong> screen (buy/sell resources for Credits). To <strong>build a Market building</strong> (income), go to <strong>City → Buildings &amp; Infrastructure → Markets → Build</strong>.
+      </p>
+
       <NpcMerchant />
 
       <div className="market-filters">

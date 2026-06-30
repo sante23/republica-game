@@ -20,11 +20,20 @@ interface WorldCity {
   };
 }
 
+// Map the fixed world coordinate space onto the canvas with a margin, so cities
+// land in the visible interior instead of the clipped corners (the old code
+// normalised to the data's own min/max, pushing every city to 0%/100% edges).
+const WORLD = 1000; // cities spawn within ~ -1000..1000
+const PAD = 6;      // % margin inside the canvas
+const toPct = (v: number) =>
+  PAD + ((Math.max(-WORLD, Math.min(WORLD, v)) + WORLD) / (2 * WORLD)) * (100 - 2 * PAD);
+
 const WorldMap: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [cities, setCities] = useState<WorldCity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -40,11 +49,13 @@ const WorldMap: React.FC = () => {
   }, []);
 
   const fetchWorldCities = async () => {
+    setLoadError(false);
     try {
       const response = await api.get('/cities/world');
-      setCities(response.data.cities);
+      setCities(response.data.cities || []);
     } catch (error) {
       console.error('Failed to fetch world cities:', error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -78,29 +89,28 @@ const WorldMap: React.FC = () => {
 
   const centerOnPlayer = () => {
     const myCities = cities.filter(c => c.userId === user?.id);
-    if (myCities.length > 0) {
-      const avgX = myCities.reduce((s, c) => s + c.x, 0) / myCities.length;
-      const avgY = myCities.reduce((s, c) => s + c.y, 0) / myCities.length;
-      setPan({ x: -avgX * zoom * 3, y: -avgY * zoom * 3 });
-      setZoom(2);
-    }
+    if (!myCities.length || !mapRef.current) return;
+    const avgX = myCities.reduce((s, c) => s + c.x, 0) / myCities.length;
+    const avgY = myCities.reduce((s, c) => s + c.y, 0) / myCities.length;
+    const W = mapRef.current.clientWidth, H = mapRef.current.clientHeight;
+    const z = 1.8;
+    setZoom(z);
+    setPan({ x: W / 2 - (toPct(avgX) / 100) * W * z, y: H / 2 - (toPct(avgY) / 100) * H * z });
   };
 
-  const minX = Math.min(...cities.map(c => c.x), -100);
-  const maxX = Math.max(...cities.map(c => c.x), 100);
-  const minY = Math.min(...cities.map(c => c.y), -100);
-  const maxY = Math.max(...cities.map(c => c.y), 100);
-  const mapWidth = maxX - minX || 200;
-  const mapHeight = maxY - minY || 200;
+  // Grid spans the whole world so it lines up with the city layer.
+  const minX = -WORLD, maxX = WORLD, minY = -WORLD, maxY = WORLD;
+  const mapWidth = maxX - minX;
+  const mapHeight = maxY - minY;
 
   const filteredCities = filter
     ? cities.filter(c =>
         c.name.toLowerCase().includes(filter.toLowerCase()) ||
-        c.owner.username.toLowerCase().includes(filter.toLowerCase())
+        (c.owner?.username || '').toLowerCase().includes(filter.toLowerCase())
       )
     : cities;
 
-  const uniqueOwners = new Set(cities.map(c => c.owner.username)).size;
+  const uniqueOwners = new Set(cities.map(c => c.owner?.username || 'Unknown')).size;
   const myCities = cities.filter(c => c.userId === user?.id).map(c => ({ id: c.id, name: c.name }));
 
   return (
@@ -132,6 +142,13 @@ const WorldMap: React.FC = () => {
 
       {loading ? (
         <div className="loading">Loading world map...</div>
+      ) : loadError ? (
+        <div className="loading">
+          Failed to load the map.{' '}
+          <button className="btn-primary" onClick={() => { setLoading(true); fetchWorldCities(); }}>Retry</button>
+        </div>
+      ) : cities.length === 0 ? (
+        <div className="loading">No cities in this world yet.</div>
       ) : viewMode === 'map' ? (
         <div className="map-container">
           <div className="map-toolbar">
@@ -165,8 +182,8 @@ const WorldMap: React.FC = () => {
             {/* Cities */}
             <div className="map-cities-layer" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
               {filteredCities.map(city => {
-                const left = ((city.x - minX) / mapWidth) * 100;
-                const top = ((city.y - minY) / mapHeight) * 100;
+                const left = toPct(city.x);
+                const top = toPct(city.y);
                 const isOwn = city.userId === user?.id;
                 const popSize = Math.max(8, Math.min(24, Math.log10(city.population + 1) * 5));
 
@@ -193,7 +210,7 @@ const WorldMap: React.FC = () => {
                 {selectedCity.isCapital && <Crown size={14} />}
                 {selectedCity.name}
               </h3>
-              <p><strong>Owner:</strong> {selectedCity.owner.username} (Lv.{selectedCity.owner.level})</p>
+              <p><strong>Owner:</strong> {selectedCity.owner?.username ?? 'Unknown'} (Lv.{selectedCity.owner?.level ?? '-'})</p>
               <p><strong>Population:</strong> {selectedCity.population.toLocaleString()}</p>
               <p><strong>Location:</strong> ({selectedCity.x}, {selectedCity.y})</p>
               {selectedCity.userId === user?.id ? (
@@ -239,8 +256,8 @@ const WorldMap: React.FC = () => {
                     {city.isCapital && <Crown size={14} style={{ color: '#FFD700', marginRight: '4px' }} />}
                     <strong>{city.name}</strong>
                   </td>
-                  <td>{city.owner.username}</td>
-                  <td>Lv.{city.owner.level}</td>
+                  <td>{city.owner?.username ?? 'Unknown'}</td>
+                  <td>Lv.{city.owner?.level ?? '-'}</td>
                   <td>{city.population.toLocaleString()}</td>
                   <td>({city.x}, {city.y})</td>
                 </tr>
